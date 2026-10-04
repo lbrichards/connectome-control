@@ -13,23 +13,19 @@ cat > /tmp/smokejob.json <<'EOS'
 {"id":"xsmoke","type":"bc","kind":"worm","tseed":0,"demo_seed":900,
  "steps":200,"dagger":0,"eval_ep":10,"eval_steps":300,"tier":0,"cost":1}
 EOS
-for H in local "${HOSTS[@]}"; do
-  if [ "$H" = "local" ]; then
-    .venv/bin/python -m connectome_control.jobs /tmp/smokejob.json
-    SHA_local=$(python3 -c "import json;print(json.load(open('results/xsmoke.json'))['manifest']['weights_sha256'])")
-  else
-    scp -q /tmp/smokejob.json "$H:/tmp/"
-    ssh "$H" 'cd ~/projects/connectome-control && .venv/bin/python -m connectome_control.jobs /tmp/smokejob.json'
-    eval "SHA_$H=\$(ssh $H "python3 -c \"import json;print(json.load(open('\''projects/connectome-control/results/xsmoke.json'\''))['\''manifest'\'']['\''weights_sha256'\''])\"")"
-  fi
+rm -f /tmp/xsha.*
+.venv/bin/python -m connectome_control.jobs /tmp/smokejob.json
+python3 -c "import json;print(json.load(open('results/xsmoke.json'))['manifest']['weights_sha256'])" > /tmp/xsha.local
+for H in "${HOSTS[@]}"; do
+  scp -q /tmp/smokejob.json "$H:/tmp/"
+  ssh "$H" 'cd ~/projects/connectome-control && .venv/bin/python -m connectome_control.jobs /tmp/smokejob.json && python3 -c "import json;print(json.load(open(\"results/xsmoke.json\"))[\"manifest\"][\"weights_sha256\"])"' > /tmp/xsha.$H
 done
 echo "== determinism check (weights sha must match across hosts) =="
-echo "local: $SHA_local"
 OK=1
+REF=$(cat /tmp/xsha.local); echo "local: $REF"
 for H in "${HOSTS[@]}"; do
-  V=$(eval echo "\$SHA_$H")
-  echo "$H:    $V"
-  [ "$V" = "$SHA_local" ] || OK=0
+  V=$(tail -1 /tmp/xsha.$H); echo "$H:    $V"
+  [ "$V" = "$REF" ] || OK=0
 done
 [ $OK -eq 1 ] && echo "DETERMINISM: EXACT MATCH (tolerance: bitwise)" \
   || { echo "DETERMINISM FAILED"; exit 1; }

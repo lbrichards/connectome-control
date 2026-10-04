@@ -1,0 +1,9 @@
+[project]
+name = "connectome-control"
+version = "0.4.0"
+description = "C. elegans connectome cart-pole control — protocol v4 replication"
+requires-python = ">=3.12"
+dependencies = ["torch", "numpy", "scipy", "matplotlib"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

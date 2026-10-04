@@ -27,7 +27,7 @@ while true; do
   echo "[$ME] running $JID"
   .venv/bin/python -m connectome_control.jobs /tmp/job.$$.json
   if [ $? -eq 0 ] && [ -f "results/$JID.json" ]; then
-    scp -q "results/$JID.json" "results/$JID.pt" "$COORD:cc-queue/results/"
+    scp -q "results/$JID.json" "results/$JID.pt" "${COORD}:cc-queue/results/"
     ssh -o BatchMode=yes "$COORD" "mv ~/cc-queue/claimed/$ME.$FNAME ~/cc-queue/done/ 2>/dev/null"
   else
     # return the job to the queue for someone else

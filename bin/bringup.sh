@@ -13,7 +13,7 @@ cat > /tmp/smokejob.json <<'EOS'
 {"id":"xsmoke","type":"bc","kind":"worm","tseed":0,"demo_seed":900,
  "steps":200,"dagger":0,"eval_ep":10,"eval_steps":300,"tier":0,"cost":1}
 EOS
-rm -f /tmp/xsha.*
+setopt NULL_GLOB; rm -f /tmp/xsha.*
 .venv/bin/python -m connectome_control.jobs /tmp/smokejob.json
 python3 -c "import json;print(json.load(open('results/xsmoke.json'))['manifest']['weights_sha256'])" > /tmp/xsha.local
 for H in "${HOSTS[@]}"; do

@@ -46,14 +46,19 @@ PREFIX = os.environ.get("CC_REPORT_PREFIX", "b2")
 def load_results():
     out = []
     for f in sorted(glob.glob(f"{Q}/results/*.json")):
-        if not os.path.basename(f).startswith(PREFIX):
-            continue
         try:
             r = json.load(open(f))
-            if "job" in r:
-                out.append(r)
         except Exception:
-            pass
+            continue
+        if "job" not in r:
+            continue
+        # batch membership: job id prefix, or (tier-4 robustness, whose ids
+        # kept the old unprefixed t4_ naming) the ref'd tier-1 model's prefix
+        jid = os.path.basename(f)
+        ref = r["job"].get("ref", "")
+        if jid.startswith(PREFIX) or (jid.startswith("t4_")
+                                      and ref.startswith(PREFIX)):
+            out.append(r)
     return out
 
 

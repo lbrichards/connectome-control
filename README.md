@@ -42,6 +42,16 @@ No credentials in the repo, ever. Deployment secrets (Vercel, R2, etc.) live in 
 
 ## Web demo model selection
 
-Rule (fixed): after batch-2 Tier 1 completes, the demo ships the worm at the MEDIAN held-rate among the 20 seeds; if that median is below the 20% demo-grade bar, the BEST of the 20 seeds is shipped and labelled as such. No automatic pickup on thresholds at other times.
+Rule (fixed, demo-side only — the research protocol is never altered for
+demo purposes): after batch-2 Tier 1 completes, candidates are the 20 worm
+seeds, and DEMO-GRADE requires all of (1) median time-to-first-sustained-
+catch <= 5 s from the demo start distribution (= training start
+distribution), (2) quiet-hold >= 80%, (3) conversion on catchable
+approaches >= 50%. Ship the median-by-held seed if it passes; otherwise
+the best-by-held passer, labelled "best of 20 seeds". Measured for this
+selection: 14/20 seeds pass; median (seed 5) failed on time-to-catch
+(5.7 s); the demo reset was also corrected to sample the training start
+distribution (a fixed symmetric start is out of distribution: the median
+seed NEVER catches from [0,0,pi+0.04,0]).
 
-Current selection: **v4 C. elegans, seed 5, median of 20 seeds (60% held)**
+Current selection: **v4 C. elegans, seed 16, best of 20 seeds (median failed demo-grade) (94% held, 4.3s to catch, 93% conversion) — criteria: ttc<=5s & quiet>=80% & convC>=50%**

@@ -197,6 +197,14 @@ def _record_in_readme(label):
 
 
 def main():
+    sel = f"{REPO}/web/demo_selection.json"
+    if os.path.exists(sel):
+        d = json.load(open(sel))
+        net, norm = export_model(d["pt"], d["metrics"]["held"],
+                                 d["seed"], d["label"])
+        _record_in_readme(d["label"] + f" — criteria: {d['criteria']}")
+        _fixtures(net, norm)
+        return
     pick = pick_batch2_worm()
     if pick is not None:
         held, tseed, pt, label = pick
@@ -209,7 +217,10 @@ def main():
             "prototype (distilled worm, protocol v3, 45% held)"
     _record_in_readme(label)
     net, norm = export_model(pt, held, tseed, label)
+    _fixtures(net, norm)
 
+
+def _fixtures(net, norm):
     model_json = json.load(open(f"{REPO}/web/public/models/worm_v4.json"))
     fx = worm_fixture_from_json(model_json)
     os.makedirs(f"{REPO}/shared/fixtures", exist_ok=True)

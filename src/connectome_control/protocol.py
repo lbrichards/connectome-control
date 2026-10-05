@@ -96,8 +96,22 @@ def metrics(TH, alive, exit_t):
             else:
                 outside = outside + 1 if not ib[t] else 0
                 t += 1
+    # time to first sustained catch (s): first index starting a HOLD_N run
+    ttc = []
+    for e in range(n):
+        end = exit_t[e] if exit_t[e] >= 0 else steps
+        run = 0; t0 = None
+        for t in range(end):
+            run = run + 1 if up[t, e] else 0
+            if run >= HOLD_N:
+                t0 = (t - HOLD_N + 1) * DT
+                break
+        ttc.append(t0)
+    ttc_v = [t for t in ttc if t is not None]
     return {
         "held": float(held.mean()),
+        "time_to_catch_median_s": (float(np.median(ttc_v)) if ttc_v else None),
+        "time_to_catch_never_frac": float(1 - len(ttc_v) / n),
         "off_track": float(off.mean()),
         "pole_fell_censored": float(fell.mean()),
         "approaches": int(appr),

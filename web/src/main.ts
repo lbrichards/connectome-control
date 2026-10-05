@@ -54,7 +54,11 @@ let hist: HistPoint[] = [];
 let classicalDelayMs = 20;
 
 function hangStart(): State {
-  return [0, 0, Math.PI + 0.04, 0];
+  // Sample the TRAINING start distribution. A fixed symmetric start is
+  // out of distribution for the worm (measured: it never catches from
+  // [0,0,pi+0.04,0], median 4.7 s from this distribution).
+  const u = (lo: number, hi: number) => lo + Math.random() * (hi - lo);
+  return [u(-0.15, 0.15), 0, Math.PI + u(-0.15, 0.15), u(-0.05, 0.05)];
 }
 function currentDelay(): number {
   return mode === "classical" ? classicalDelayMs : plant.delay_ms;

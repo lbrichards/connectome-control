@@ -123,9 +123,10 @@ function colors() {
 function drawStage(C: ReturnType<typeof colors>): void {
   const W = cv.clientWidth, Hh = cv.clientHeight;
   ctx.clearRect(0, 0, W, Hh);
-  const track = plant.track, L = plant.half_length;
-  const span = 2 * track + 0.7;
-  const sc = Math.min((W * 0.92) / span, (Hh * 0.82) / (2 * L + 0.5));
+  const track = plant.track;
+  const poleLen = 2 * plant.half_length;   // half_length is pivot-to-CoM;
+  const span = 2 * track + 0.7;            // the visible rod is twice that
+  const sc = Math.min((W * 0.92) / span, (Hh * 0.82) / (2 * poleLen + 0.5));
   const cx = W / 2, railY = Hh * 0.5 + 0.12 * sc;
   const X = (v: number) => cx + v * sc;
   const s = sim.s;
@@ -141,7 +142,7 @@ function drawStage(C: ReturnType<typeof colors>): void {
   ctx.strokeStyle = C.ink; ctx.lineWidth = 2;
   ctx.strokeRect(px - cw / 2, py, cw, ch);
   // phi: 0 = upright -> tip above pivot at phi = 0
-  const tx = px + L * Math.sin(s[2]) * sc, ty = py - L * Math.cos(s[2]) * sc;
+  const tx = px + poleLen * Math.sin(s[2]) * sc, ty = py - poleLen * Math.cos(s[2]) * sc;
   ctx.lineWidth = 3;
   ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(tx, ty); ctx.stroke();
   ctx.fillStyle = Math.abs(wrap(s[2])) < UP_TOL ? C.accent : C.ink;

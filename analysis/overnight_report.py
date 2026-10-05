@@ -186,6 +186,20 @@ def main():
                 o, p = fisher_exact([catch_tbl[pair[0]], catch_tbl[pair[1]]])
                 L.append(f"\nFisher catch-at-all {pair[0]} vs {pair[1]}: "
                          f"OR={o:.2f} p={p:.4f}")
+        # off-track vs prototype (runaway fix check)
+        PROTO_OFF = {"worm": 66, "shuffle": 99, "dense78": 100}
+        L.append("\nOff-track rate vs prototype (median-model medians, "
+                 "prototype eval at L=3):")
+        for a in ARMS:
+            if by[a]:
+                nowv = np.median([r["metrics"]["off_track"] for r in by[a]])*100
+                L.append(f"- {LBL[a]}: now {nowv:.0f}% vs prototype "
+                         f"{PROTO_OFF[a]}%")
+        gate_f = f"{Q}/tier4_gate.json"
+        if os.path.exists(gate_f):
+            g4 = json.load(open(gate_f))
+            L.append(f"\nTier-4 demo-grade gate: {g4['passed']}/{g4['total']} "
+                     "tier-1 models passed (quiet_hold >= 0.80)")
         # graph-level
         shuf = by["shuffle"]
         if shuf:

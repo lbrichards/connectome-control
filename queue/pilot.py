@@ -65,20 +65,30 @@ def emit_tier4(c):
             continue
         r = json.load(open(p))
         res.append((r["job"]["kind"], r["metrics"]["held"], jid))
-    arms = {}
-    for kind, held, jid in res:
-        arm = "shuffle" if kind.startswith("shuffle") else kind
-        arms.setdefault(arm, []).append((held, jid))
-    jobs = []
-    for arm, lst in arms.items():
-        lst.sort()
-        for tag, pick in (("median", lst[len(lst)//2]), ("best", lst[-1])):
-            ref = pick[1]
-            cfg = {"type": "robust", "ref": ref, "tier": 4, "cost": 1,
-                   "host_req": ME, "kind": arm, "tseed": 0}
-            cfg["id"] = (f"t4_{arm}_{tag}_" + hashlib.sha256(
-                json.dumps(cfg, sort_keys=True).encode()).hexdigest()[:10])
-            jobs.append(cfg)
+    # demo-grade gate: every tier-1 model with quiet_hold >= 0.80 gets the
+    # robustness suite; the count of passers is itself a reported result.
+    jobs, n_passed, n_total = [], 0, 0
+    for jid_, cfg_ in rows:
+        pth = f"{Q}/results/{jid_}.json"
+        if not os.path.exists(pth):
+            continue
+        r = json.load(open(pth))
+        n_total += 1
+        qh = r["metrics"].get("quiet_hold")
+        if qh is None or qh < 0.80:
+            continue
+        n_passed += 1
+        arm = ("shuffle" if r["job"]["kind"].startswith("shuffle")
+               else r["job"]["kind"])
+        cfg = {"type": "robust", "ref": jid_, "tier": 4, "cost": 1,
+               "host_req": ME, "kind": arm, "tseed": r["job"]["tseed"]}
+        cfg["id"] = (f"t4_{arm}_s{cfg['tseed']}_" + hashlib.sha256(
+            json.dumps(cfg, sort_keys=True).encode()).hexdigest()[:10])
+        jobs.append(cfg)
+    log(f"tier-4 demo-grade gate: {n_passed}/{n_total} tier-1 models passed "
+        f"(quiet_hold >= 0.80)")
+    open(f"{Q}/tier4_gate.json", "w").write(json.dumps(
+        {"passed": n_passed, "total": n_total}))
     path = f"{Q}/tier4.jsonl"
     with open(path, "w") as f:
         for j in jobs:

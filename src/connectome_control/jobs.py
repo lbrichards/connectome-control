@@ -87,12 +87,16 @@ def _norm(O, A):
 
 
 def train_bc(O, A, net, steps, bs=12, lr=5e-3, seed=0,
-             ema_target=None, cap=None):
+             ema_target=None, cap=None, wt=None):
     norm = _norm(O, A)
     o_mu, o_sd, a_mu, a_sd = norm
     xs = torch.from_numpy((O - o_mu) / o_sd)
     ys = torch.from_numpy((A - a_mu) / a_sd)
-    wt = torch.from_numpy((1.0 + 7.0 * (O[..., 2] > 0.955)).astype(np.float32))
+    if wt is None:
+        # catch-phase upweighting needs the cos-theta channel (3-input obs)
+        wt = ((1.0 + 7.0 * (O[..., 2] > 0.955)) if O.shape[-1] >= 3
+              else np.ones_like(A)).astype(np.float32)
+    wt = torch.from_numpy(np.asarray(wt, np.float32))
     total = cap if ema_target is not None else steps
     opt = torch.optim.Adam(net.parameters(), lr=lr)
     sch = torch.optim.lr_scheduler.CosineAnnealingLR(opt, total)
@@ -143,6 +147,115 @@ def manifest(job, net, extra):
 
 
 # ------------------------------------------------------------- job types
+
+def quiet_starts(n, rng):
+    return np.stack([[rng.uniform(-.3, .3), rng.uniform(-.3, .3),
+                      rng.uniform(-.08, .08), rng.uniform(-.3, .3)]
+                     for _ in range(n)])
+
+
+def quiet_hold(net, norm, n_ep=50):
+    """Demo-grade gate metric: hold fraction from quiet near-upright starts."""
+    TH, alive, exit_t = rollout(net, norm,
+        quiet_starts(n_ep, np.random.default_rng(555)), 500)
+    up = np.abs(TH) < UP_TOL
+    up[~np.isfinite(TH)] = False
+    return float((alive & up[-HOLD_N:].all(0)).mean())
+
+
+def run_distill_bc(job):
+    """Tier-1 (corrected): BC on the shared relay-distillation dataset,
+    plus one DAgger round labelled by the relay itself."""
+    from .relay import RELAY_DIR, load_relay, relay_rollout, GATE
+    from .physics import rk4_batch
+    torch.manual_seed(job["tseed"])
+    net = _build_net(job["kind"], job["tseed"])
+    d = np.load(f"{RELAY_DIR}/distill.npz")
+    O, A = d["O"], d["A"]
+    norm, curve, _, _, _ = train_bc(O, A, net, job["steps"],
+                                    seed=job["tseed"])
+    for rnd in range(job.get("dagger", 1)):
+        swi, swi_n, cat, cat_n = load_relay()
+        # student drives; relay labels every visited state
+        rng = np.random.default_rng(500 + rnd)
+        starts = np.concatenate([hang_starts(150, rng),
+                                 _arrivals(50, rng)])
+        dO, dA = _relay_label_rollout(net, norm, swi, swi_n, cat, cat_n,
+                                      starts, O.shape[1])
+        O = np.concatenate([O, dO]); A = np.concatenate([A, dA])
+        norm, curve, _, _, _ = train_bc(O, A, net,
+                                        job.get("dagger_steps", 2000),
+                                        seed=job["tseed"])
+    TH, alive, exit_t = rollout(net, norm,
+        hang_starts(job["eval_ep"], np.random.default_rng(999)),
+        job["eval_steps"])
+    m = metrics(TH, alive, exit_t)
+    m["quiet_hold"] = quiet_hold(net, norm)
+    return net, norm, m, {"final_mse": curve[-1], "curve": curve}
+
+
+def _arrivals(n, rng):
+    return np.stack([[rng.uniform(-.8, .8), rng.uniform(-1.5, 1.5),
+                      rng.uniform(-.35, .35), rng.uniform(-2.2, 2.2)]
+                     for _ in range(n)])
+
+
+@torch.no_grad()
+def _relay_label_rollout(net, norm, swi, swi_n, cat, cat_n, starts, seq):
+    from .relay import GATE
+    from .physics import rk4_batch
+    o_mu, o_sd, a_mu, a_sd = norm
+    s = starts.copy(); n = len(s)
+    hS = torch.zeros(n, net.n); preS = net.precompute()
+    hs = torch.zeros(n, swi.n); hc = torch.zeros(n, cat.n)
+    ps, pc = swi.precompute(), cat.precompute()
+    modeB = np.zeros(n, bool); a = np.zeros(n); alive = np.ones(n, bool)
+    dO = np.zeros((seq, n, 3), np.float32)
+    dA = np.zeros((seq, n), np.float32)
+    obs_catch = lambda st: np.stack([st[:, 0], wrap(st[:, 2])], 1)
+    for t in range(seq):
+        w = wrap(s[:, 2])
+        enter = (~modeB) & (np.abs(w) < GATE[0]) & (np.abs(s[:, 3]) < GATE[1])                 & (np.abs(s[:, 1]) < GATE[2])
+        if enter.any():
+            hc[torch.from_numpy(enter)] = 0.0
+        modeB = (modeB | enter) & (np.abs(w) <= GATE[3])
+        obS = np.stack([s[:, 0], np.sin(s[:, 2]), np.cos(s[:, 2])], 1).astype(np.float32)
+        m_, sd_, am_, asd_ = swi_n
+        hs.copy_(swi.cell(hs, swi.input_drive(torch.from_numpy((obS - m_) / sd_)), ps))
+        uS = np.clip(swi.read(hs).squeeze(-1).numpy() * asd_ + am_, -F_MAX, F_MAX)
+        obC = obs_catch(s).astype(np.float32)
+        m_, sd_, am_, asd_ = cat_n
+        hc.copy_(cat.cell(hc, cat.input_drive(torch.from_numpy((obC - m_) / sd_)), pc))
+        uC = np.clip(cat.read(hc).squeeze(-1).numpy() * asd_ + am_, -F_MAX, F_MAX)
+        dO[t] = obS; dA[t] = np.where(modeB, uC, uS)
+        x = torch.from_numpy((obS - o_mu) / o_sd)
+        hS = net.cell(hS, net.input_drive(x), preS)
+        cmd = np.clip(net.read(hS).squeeze(-1).numpy() * a_sd + a_mu,
+                      -F_MAX, F_MAX)
+        s = np.where(alive[:, None], rk4_batch(s, a, DT), s)
+        a = cmd
+        alive &= np.abs(s[:, 0]) <= 3.0
+    return dO.transpose(1, 0, 2), dA.T
+
+
+def run_distill_matched(job):
+    """Tier-2 (corrected): matched-MSE on the relay-distillation data."""
+    from .relay import RELAY_DIR
+    torch.manual_seed(job["tseed"])
+    net = _build_net(job["kind"], job["tseed"])
+    d = np.load(f"{RELAY_DIR}/distill.npz")
+    norm, curve, used, hit, ema = train_bc(
+        d["O"], d["A"], net, 0, seed=job["tseed"],
+        ema_target=job["target"], cap=job["cap"])
+    TH, alive, exit_t = rollout(net, norm,
+        hang_starts(job["eval_ep"], np.random.default_rng(999)),
+        job["eval_steps"])
+    m = metrics(TH, alive, exit_t)
+    m["quiet_hold"] = quiet_hold(net, norm)
+    return net, norm, m, {
+        "steps_to_target": used, "hit_target": hit, "ema_mse": ema,
+        "final_mse": curve[-1] if curve else None}
+
 
 def run_bc(job):
     from .datasets import load as load_demos
@@ -228,7 +341,10 @@ def run_robust(job):
 def run_job(job, out_dir="results"):
     t0 = time.time()
     runner = {"bc": run_bc, "matched": run_matched,
-              "conv448": run_matched, "robust": run_robust}[job["type"]]
+              "conv448": run_matched, "robust": run_robust,
+              "distill_bc": run_distill_bc,
+              "distill_matched": run_distill_matched,
+              "distill_conv448": run_distill_matched}[job["type"]]
     net, norm, m, extra = runner(job)
     res = {"job": job, "metrics": m, **extra,
            "manifest": manifest(job, net,

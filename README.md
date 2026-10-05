@@ -44,4 +44,4 @@ No credentials in the repo, ever. Deployment secrets (Vercel, R2, etc.) live in 
 
 Rule (fixed): after batch-2 Tier 1 completes, the demo ships the worm at the MEDIAN held-rate among the 20 seeds; if that median is below the 20% demo-grade bar, the BEST of the 20 seeds is shipped and labelled as such. No automatic pickup on thresholds at other times.
 
-Current selection: **prototype (distilled worm, protocol v3, 45% held)**
+Current selection: **v4 C. elegans, seed 5, median of 20 seeds (60% held)**

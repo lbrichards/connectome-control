@@ -39,3 +39,9 @@ must produce identical weight hashes.
 ## Secrets policy
 
 No credentials in the repo, ever. Deployment secrets (Vercel, R2, etc.) live in the provider's environment-variable settings; local development uses `.env` files which are gitignored (`web/.env.example` documents expected keys). Worker host aliases are supplied via `CC_HOSTS` or `~/cc-queue/hosts.txt`, not committed. Licensed under the MIT License (see LICENSE).
+
+## Web demo model selection
+
+Rule (fixed): after batch-2 Tier 1 completes, the demo ships the worm at the MEDIAN held-rate among the 20 seeds; if that median is below the 20% demo-grade bar, the BEST of the 20 seeds is shipped and labelled as such. No automatic pickup on thresholds at other times.
+
+Current selection: **prototype (distilled worm, protocol v3, 45% held)**

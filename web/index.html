@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cart-pole</title>
+<style>
+:root{
+  --ground:#ffffff; --ink:#222222; --mid:#8a8a8a; --rail:#d0d0d0; --faint:#ececec; --accent:#2b6cb0;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --ground:#1c1c1c; --ink:#e4e4e4; --mid:#7d7d7d; --rail:#3c3c3c; --faint:#2a2a2a; --accent:#6fa3e0; }
+}
+:root[data-theme="dark"]{ --ground:#1c1c1c; --ink:#e4e4e4; --mid:#7d7d7d; --rail:#3c3c3c; --faint:#2a2a2a; --accent:#6fa3e0; }
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:var(--ground);color:var(--ink);
+  font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;
+  display:flex;flex-direction:column;overflow:hidden;-webkit-user-select:none;user-select:none}
+header,footer{display:flex;align-items:center;gap:16px;padding:12px 20px;flex-wrap:wrap}
+h1{font-size:15px;font-weight:600;margin:0}
+.seg{display:inline-flex;border:1px solid var(--rail);border-radius:4px;overflow:hidden}
+.seg button{border:0;border-radius:0;min-height:36px;padding:6px 14px;color:var(--mid)}
+.seg button[aria-pressed="true"]{background:var(--faint);color:var(--ink)}
+#timer{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--mid)}
+#stage{flex:1;position:relative;min-height:160px;touch-action:manipulation}
+#c{position:absolute;inset:0;width:100%;height:100%;display:block}
+#msg{position:absolute;left:0;right:0;top:12%;text-align:center;color:var(--ink);pointer-events:none;padding:0 20px}
+#panel{padding:4px 20px 0;border-top:1px solid var(--faint)}
+#panel h2{font-size:13px;font-weight:600;margin:8px 0 2px}
+#panel .sub{font-size:13px;color:var(--mid);margin:0 0 6px}
+#lanes{width:100%;display:block}
+#modelTag{font-size:12px;color:var(--mid);margin:4px 0 8px}
+footer{color:var(--mid);border-top:1px solid var(--faint)}
+button{font:inherit;color:var(--ink);background:none;border:1px solid var(--rail);
+  border-radius:4px;padding:8px 14px;min-height:44px;cursor:pointer}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.delay{display:flex;align-items:center;gap:10px;color:var(--ink)}
+.delay output,.fixed{font-variant-numeric:tabular-nums;color:var(--mid)}
+.delay output{min-width:4.5em}
+input[type=range]{width:180px;accent-color:var(--ink)}
+input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.hint{margin-left:auto;font-size:13px}
+[hidden]{display:none !important}
+@media (max-width:640px){ .hint{margin-left:0;width:100%} #timer{margin-left:0} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Cart-pole</h1>
+  <div class="seg" role="group" aria-label="Controller">
+    <button type="button" id="modeClassical" aria-pressed="true">Classical</button>
+    <button type="button" id="modeWorm" aria-pressed="false">Worm connectome</button>
+  </div>
+  <div id="timer">Upright 0.0 s</div>
+</header>
+<div id="stage">
+  <canvas id="c" aria-label="Animated cart and pole"></canvas>
+  <div id="msg" role="status"></div>
+</div>
+<section id="panel" aria-label="Controller inputs and output">
+  <h2>What the controller sees</h2>
+  <p class="sub" id="panelSub"></p>
+  <canvas id="lanes" aria-hidden="true"></canvas>
+  <p id="modelTag" hidden></p>
+</section>
+<footer>
+  <button id="reset" type="button">Reset</button>
+  <button id="pause" type="button">Pause</button>
+  <label class="delay" id="delayCtl">Delay <input id="delay" type="range" min="0" max="200" step="5" value="20"> <output id="delayOut">20 ms</output></label>
+  <span class="fixed" id="delayFixed" hidden>Delay 20 ms, as trained</span>
+  <span class="hint">Arrow keys push the pole. On a touchscreen, tap left or right. R resets, space pauses.</span>
+</footer>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

@@ -89,6 +89,8 @@ def export_model(pt_path, held, tseed, label):
         "protocol": cc.PROTOCOL_VERSION,
         "label": label,
         "plant": PLANT,
+        "classical": {"K": [float(v) for v in K_D],
+                      "energy_target": float(E_TARGET)},
         "n": net.n,
         "chem": [[int(i), int(j), r6(wc[i, j])] for i, j in zip(ii, jj)],
         "gap": [[int(i), int(j), r6(g[i, j])]

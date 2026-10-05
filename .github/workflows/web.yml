@@ -1,0 +1,15 @@
+name: web
+on:
+  push: { paths: ["web/**", "shared/fixtures/**", ".github/workflows/web.yml"] }
+  pull_request: { paths: ["web/**", "shared/fixtures/**"] }
+jobs:
+  build-and-parity:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
+      - run: npm ci
+      - run: npm run build
+      - run: npm test

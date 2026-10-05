@@ -37,9 +37,17 @@ def armof(kind):
     return "shuffle" if kind.startswith("shuffle") else kind
 
 
+# Report over ONE batch only: job-id prefix filter (default b2). Without
+# this the glob pools every batch in results/ (the 21:46 Oct-5 report mixed
+# deprecated batch-1 floor-effect runs into the batch-2 analysis).
+PREFIX = os.environ.get("CC_REPORT_PREFIX", "b2")
+
+
 def load_results():
     out = []
     for f in sorted(glob.glob(f"{Q}/results/*.json")):
+        if not os.path.basename(f).startswith(PREFIX):
+            continue
         try:
             r = json.load(open(f))
             if "job" in r:

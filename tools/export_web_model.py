@@ -45,17 +45,28 @@ PLANT = {
 }
 
 
-def pick_median_worm():
+def pick_batch2_worm():
+    """Deterministic selection rule (recorded in README):
+    1. the worm at the MEDIAN held-rate among the 20 batch-2 Tier-1 seeds;
+    2. if the median is not demo-grade (>= 20% held), the BEST seed,
+       labelled as such. No automatic threshold pickup at export time:
+    this function requires the full 20-seed population."""
     rows = []
-    for f in glob.glob(f"{Q}/results/t1_worm_*.json"):
+    for f in glob.glob(f"{Q}/results/b2t1_worm_*.json"):
         r = json.load(open(f))
         if r["job"]["kind"] == "worm":
             rows.append((r["metrics"]["held"], r["job"]["tseed"],
                          f.replace(".json", ".pt")))
-    if not rows:
-        return None
+    if len(rows) < 20:
+        return None                      # tier 1 not complete yet
     rows.sort()
-    return rows[len(rows) // 2]
+    med = rows[len(rows) // 2]
+    if med[0] >= DEMO_GRADE_HELD:
+        return med + (f"v4 C. elegans, seed {med[1]}, median of 20 seeds "
+                      f"({med[0]*100:.0f}% held)",)
+    best = rows[-1]
+    return best + (f"v4 C. elegans, seed {best[1]}, best of 20 seeds "
+                   f"({best[0]*100:.0f}% held; median was not demo-grade)",)
 
 
 def export_model(pt_path, held, tseed, label):
@@ -162,23 +173,39 @@ def classical_fixture(ticks=500):
             "tolerance_abs": 1e-5}
 
 
-DEMO_GRADE_HELD = 0.20     # a median model below this is not demo-grade
+DEMO_GRADE_HELD = 0.20     # median below this -> fall to best-of-20
+
+def _record_in_readme(label):
+    rp = f"{REPO}/README.md"
+    s = open(rp).read()
+    block = ("\n## Web demo model selection\n\n"
+             "Rule (fixed): after batch-2 Tier 1 completes, the demo ships "
+             "the worm at the MEDIAN held-rate among the 20 seeds; if that "
+             "median is below the 20% demo-grade bar, the BEST of the 20 "
+             "seeds is shipped and labelled as such. No automatic pickup "
+             "on thresholds at other times.\n\n"
+             f"Current selection: **{label}**\n")
+    if "## Web demo model selection" in s:
+        import re
+        s = re.sub(r"\n## Web demo model selection\n.*?(?=\n## |\Z)",
+                   block, s, flags=re.S)
+    else:
+        s += block
+    open(rp, "w").write(s)
+
 
 def main():
-    pick = pick_median_worm()
-    if pick is not None and pick[0] >= DEMO_GRADE_HELD:
-        held, tseed, pt = pick
-        label = f"v4 C. elegans, seed {tseed}, median by held-rate " \
-                f"({held*100:.0f}% held)"
+    pick = pick_batch2_worm()
+    if pick is not None:
+        held, tseed, pt, label = pick
     else:
-        if pick is not None:
-            print(f"v4 median worm holds {pick[0]*100:.0f}% (< "
-                  f"{DEMO_GRADE_HELD*100:.0f}% demo-grade bar); "
-                  "falling back per SPEC")
+        print("batch-2 Tier 1 incomplete (<20 worm seeds); "
+              "shipping prototype fallback per SPEC")
         pt = os.path.expanduser(
             "~/projects/Connectome/student_distilled_v3.pt")
         held, tseed, label = 0.45, 3, \
             "prototype (distilled worm, protocol v3, 45% held)"
+    _record_in_readme(label)
     net, norm = export_model(pt, held, tseed, label)
 
     model_json = json.load(open(f"{REPO}/web/public/models/worm_v4.json"))

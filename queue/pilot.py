@@ -27,7 +27,15 @@ Q = os.path.expanduser("~/cc-queue")
 DB = f"{Q}/queue.db"
 REPO = os.path.expanduser("~/projects/connectome-control")
 ME = socket.gethostname().split(".")[0]
-HOSTS = ["mbp", "mba"]          # rerun candidates besides coordinator
+# Worker host aliases come from the environment (or ~/cc-queue/hosts.txt),
+# never hardcoded: keeps machine names out of the repo.
+def _hosts():
+    env = os.environ.get("CC_HOSTS")
+    if env:
+        return env.split(",")
+    p = os.path.expanduser("~/cc-queue/hosts.txt")
+    return open(p).read().split() if os.path.exists(p) else []
+HOSTS = _hosts()
 
 
 def log(m):
@@ -107,8 +115,9 @@ def rerun_checks(c):
     out = []
     for jid, host, cfg in picks:
         cfg = json.loads(cfg)
-        orig = (host or "").split(".")[0].replace("Larrys-MacBook-Pro","mbp").replace("mini","macmini")
-        cands = [h for h in HOSTS + ["macmini"] if h != orig]
+        orig = (host or "").split(".")[0].lower()
+        cands = [h for h in HOSTS + ["macmini"]
+                 if h.lower() != orig and orig not in h.lower()]
         target = None
         for cand in cands:
             probe = ["true"] if cand == "macmini" else                 ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",

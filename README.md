@@ -35,3 +35,7 @@ Every result JSON carries a manifest: graph spec, seed, budget, protocol
 version, git hash, machine, library versions, weights sha256. Jobs are
 deterministic (CPU, single-thread, seeded): the same job on two machines
 must produce identical weight hashes.
+
+## Secrets policy
+
+No credentials in the repo, ever. Deployment secrets (Vercel, R2, etc.) live in the provider's environment-variable settings; local development uses `.env` files which are gitignored (`web/.env.example` documents expected keys). Worker host aliases are supplied via `CC_HOSTS` or `~/cc-queue/hosts.txt`, not committed. No LICENSE file is intentional for now: the code is all-rights-reserved by default until a licensing decision at publication.

@@ -2,3 +2,6 @@
 __pycache__/
 results/
 *.log
+.env
+.env.*
+!.env.example

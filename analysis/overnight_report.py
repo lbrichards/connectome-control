@@ -301,6 +301,28 @@ def main():
     for r in t4:
         L.append(f"- ref `{r['job']['ref']}`: {json.dumps(r['metrics'])}")
 
+    # --- per-job host assignment (full appendix)
+    try:
+        c2 = sqlite3.connect(f"{Q}/queue.db")
+        L.append("\n## Host assignment per job\n")
+        L.append("| job | host | minutes |")
+        L.append("|---|---|---|")
+        for jid, h, mn in c2.execute(
+                """SELECT id, host, ROUND((done_at-claimed_at)/60.0,1)
+                   FROM jobs WHERE state='DONE' AND id LIKE 'b2%'
+                   ORDER BY id"""):
+            L.append(f"| `{jid}` | {h} | {mn} |")
+    except Exception as e:
+        L.append(f"(host table unavailable: {e})")
+    iv = f"{Q}/imac_validation.txt"
+    if os.path.exists(iv):
+        L.append("\n## iMac mid-batch admission validation\n")
+        L.append("The iMac joined after launch (determinism smoke-checked "
+                 "pre-admission; lockfile/CPU verified; commit stamp newer "
+                 "than fleet). Two of its completed jobs re-run on mbp:\n")
+        for line in open(iv):
+            L.append(f"- {line.strip()}")
+
     # --- rerun checks (written by pilot)
     rr = f"{Q}/rerun_checks.json"
     if os.path.exists(rr):

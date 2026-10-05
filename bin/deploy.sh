@@ -5,7 +5,9 @@ set -eu
 H=$1
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 ssh "$H" "mkdir -p ~/projects/connectome-control"
-rsync -a --delete --exclude .venv --exclude results --exclude __pycache__ \
+git -C "$REPO" rev-parse HEAD > "$REPO/COMMIT_STAMP"
+rsync -a --delete --exclude .git --exclude .venv --exclude results \
+      --exclude __pycache__ --exclude logs --exclude node_modules \
       "$REPO/" "$H:projects/connectome-control/"
 ssh "$H" 'cd ~/projects/connectome-control
   command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh

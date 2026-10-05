@@ -12,7 +12,7 @@ for H in "$@"; do
   if ! ssh -o BatchMode=yes -o ConnectTimeout=8 "$H" true 2>/dev/null; then
     echo "  SSH: UNREACHABLE"; FAIL=1; continue
   fi
-  RC=$(ssh "$H" "cd ~/projects/$REPO_NAME 2>/dev/null && git rev-parse HEAD" 2>/dev/null)
+  RC=$(ssh "$H" "cd ~/projects/$REPO_NAME 2>/dev/null && { git rev-parse HEAD 2>/dev/null || cat COMMIT_STAMP; }" 2>/dev/null)
   if [ "$RC" = "$LOCAL_COMMIT" ]; then echo "  commit: match"
   else echo "  commit: MISMATCH ($RC)"; FAIL=1; fi
   ssh "$H" "cd ~/projects/$REPO_NAME && .venv/bin/python - <<'EOF'

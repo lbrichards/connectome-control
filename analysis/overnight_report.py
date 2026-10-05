@@ -200,23 +200,49 @@ def main():
             g4 = json.load(open(gate_f))
             L.append(f"\nTier-4 demo-grade gate: {g4['passed']}/{g4['total']} "
                      "tier-1 models passed (quiet_hold >= 0.80)")
-        # graph-level
+        # 60-graph test, like-with-like: 20 single worm runs vs 60 single
+        # shuffle runs (one per graph). Primary: Mann-Whitney + permutation
+        # on held; Fisher on catch-at-all. The old aggregate-vs-single-run
+        # rank is kept only as a labelled secondary.
         shuf = by["shuffle"]
-        if shuf:
-            gf = {}
-            for r in shuf:
-                gf.setdefault(r["job"]["kind"], []).append(
-                    r["metrics"]["held"] > 0)
-            fr = np.array([np.mean(v) for v in gf.values()])
-            worm_runs = by["worm"]
-            if worm_runs:
-                wf = np.mean([r["metrics"]["held"] > 0 for r in worm_runs])
-                nge = int((fr >= wf).sum())
-                L.append(f"\n### Graph-level: worm catch fraction {wf:.2f} vs "
-                         f"{len(fr)} shuffled graphs (median {np.median(fr):.2f}, "
-                         f"range {fr.min():.2f}-{fr.max():.2f}); "
-                         f"{nge}/{len(fr)} graphs >= worm -> permutation "
-                         f"p={(nge+1)/(len(fr)+1):.3f}")
+        worm_runs = by["worm"]
+        if shuf and worm_runs:
+            from scipy.stats import mannwhitneyu, percentileofscore
+            w = np.array([r["metrics"]["held"] for r in worm_runs])
+            s = np.array([r["metrics"]["held"] for r in shuf])
+            U, p_mw = mannwhitneyu(w, s, alternative="greater")
+            rng = np.random.default_rng(0)
+            pooled = np.concatenate([w, s]); nw = len(w)
+            obs = np.median(w) - np.median(s)
+            null = np.empty(100000)
+            for i in range(len(null)):
+                rng.shuffle(pooled)
+                null[i] = np.median(pooled[:nw]) - np.median(pooled[nw:])
+            p_perm = (np.sum(null >= obs) + 1) / (len(null) + 1)
+            cw, cs = int((w > 0).sum()), int((s > 0).sum())
+            _, p_f = fisher_exact([[cw, len(w)-cw], [cs, len(s)-cs]],
+                                  alternative="greater")
+            pct = percentileofscore(s, np.median(w), kind="weak")
+            L.append(
+                f"\n### 60-graph test (run-level, like-with-like): "
+                f"{len(w)} worm runs vs {len(s)} shuffle runs (1/graph)\n"
+                f"- held: worm median {np.median(w)*100:.0f}% vs shuffle "
+                f"{np.median(s)*100:.0f}%; Mann-Whitney one-sided "
+                f"p={p_mw:.1e} (rank-biserial r={2*U/(len(w)*len(s))-1:.2f}); "
+                f"permutation on median diff p={p_perm:.1e}\n"
+                f"- catch-at-all: worm {cw}/{len(w)} vs shuffle "
+                f"{cs}/{len(s)}; Fisher one-sided p={p_f:.2f} "
+                f"(saturated under v4 relay distillation — no longer "
+                f"discriminating)\n"
+                f"- worm median held sits at the {pct:.0f}th percentile of "
+                f"the shuffle distribution "
+                f"({int((s >= np.median(w)).sum())}/{len(s)} shuffle runs "
+                f">= it; shuffle max {s.max()*100:.0f}%)\n"
+                f"- secondary (UNIT MISMATCH, continuity with prototype "
+                f"only — worm 20-seed aggregate ranked against single-run "
+                f"graphs): graphs >= worm median: "
+                f"{int((s >= np.median(w)).sum())}/{len(s)} -> rank "
+                f"p={(int((s >= np.median(w)).sum())+1)/(len(s)+1):.3f}")
         # figures
         strip([(LBL[a], [r["metrics"]["held"]*100 for r in by[a]], COL[a])
                for a in ARMS], "t1_held", "held (%)",

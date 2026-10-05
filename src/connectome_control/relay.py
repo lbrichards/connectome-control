@@ -78,7 +78,7 @@ def _collect_catch(n_ep, seq, seed, noise=0.6):
     return np.array(O, np.float32), np.array(A, np.float32)
 
 
-def train_catch(seed=1):
+def train_catch(seed=1, steps=2500):
     torch.manual_seed(seed)
     chem, gap, in_idx, n = build_graph("worm")
     net = ConnectomeRNN(chem, gap, np.asarray(in_idx, np.int64),
@@ -86,12 +86,11 @@ def train_catch(seed=1):
                         seed=seed, spectral_radius=1.3, in_gain=2.0,
                         dt_over_tau_init=0.2)
     O, A = _collect_catch(256, 250, seed)
-    norm, *_ = train_bc(O, A, net, 2500, seed=seed, wt=np.ones_like(A))
+    norm, *_ = train_bc(O, A, net, steps, seed=seed, wt=np.ones_like(A))
     # eval from arrivals (delayed, 2-input obs)
     held = _eval_catch(net, norm)
-    print(f"catch: held from arrivals {held*100:.0f}%", flush=True)
-    assert held >= 0.90, f"CATCH GATE FAILED: {held:.2f}"
-    return net, norm
+    print(f"catch({steps}): held from arrivals {held*100:.0f}%", flush=True)
+    return net, norm, held
 
 
 @torch.no_grad()
@@ -152,16 +151,17 @@ def relay_rollout(swi, swi_n, cat, cat_n, starts_arr, steps):
     return held, up, O.transpose(1, 0, 2), A.T
 
 
-def load_relay():
+def load_relay(relay_dir=None):
+    rd = relay_dir or RELAY_DIR
     swi = _build_net("worm", 0)
-    ck = torch.load(f"{RELAY_DIR}/swing.pt", weights_only=False)
+    ck = torch.load(f"{rd}/swing.pt", weights_only=False)
     swi.load_state_dict(ck["state"]); swi_n = ck["norm"]
     chem, gap, in_idx, n = build_graph("worm")
     cat = ConnectomeRNN(chem, gap, np.asarray(in_idx, np.int64),
                         np.arange(n, dtype=np.int64), n_in=2, n_out=1,
                         seed=1, spectral_radius=1.3, in_gain=2.0,
                         dt_over_tau_init=0.2)
-    ck = torch.load(f"{RELAY_DIR}/catch.pt", weights_only=False)
+    ck = torch.load(f"{rd}/catch.pt", weights_only=False)
     cat.load_state_dict(ck["state"]); cat_n = ck["norm"]
     return swi, swi_n, cat, cat_n
 
@@ -171,7 +171,8 @@ def build_assets():
     swi, swi_n = train_swing()
     torch.save({"state": swi.state_dict(), "norm": swi_n},
                f"{RELAY_DIR}/swing.pt")
-    cat, cat_n = train_catch()
+    cat, cat_n, ch = train_catch()
+    assert ch >= 0.90, f"CATCH GATE FAILED: {ch:.2f}"
     torch.save({"state": cat.state_dict(), "norm": cat_n},
                f"{RELAY_DIR}/catch.pt")
     held, up, _, _ = relay_rollout(swi, swi_n, cat, cat_n,
@@ -194,5 +195,61 @@ def build_assets():
     print("relay assets complete + checksummed", flush=True)
 
 
+def build_quality_variant(tag, target_lo, target_hi, catch_steps0):
+    """Build a relay asset set whose held-rate lands in [lo, hi] by
+    adjusting the catch brain's training budget (bisection, <=4 tries).
+    Swing brain is shared from the main assets."""
+    import shutil
+    out = os.path.join(os.path.dirname(RELAY_DIR), f"relay_{tag}")
+    os.makedirs(out, exist_ok=True)
+    swi = _build_net("worm", 0)
+    ck = torch.load(f"{RELAY_DIR}/swing.pt", weights_only=False)
+    swi.load_state_dict(ck["state"]); swi_n = ck["norm"]
+    shutil.copy(f"{RELAY_DIR}/swing.pt", f"{out}/swing.pt")
+    lo_s, hi_s = 150, 3000
+    steps = catch_steps0
+    best = None
+    for attempt in range(4):
+        cat, cat_n, _ = train_catch(steps=steps)
+        held, up, _, _ = relay_rollout(swi, swi_n, cat, cat_n,
+            hang_starts(200, np.random.default_rng(999)), 1000)
+        hm = float(held.mean())
+        print(f"[{tag}] catch_steps={steps} -> relay held {hm*100:.0f}%",
+              flush=True)
+        best = (cat, cat_n, hm, steps)
+        if target_lo <= hm <= target_hi:
+            break
+        if hm > target_hi: hi_s = steps; steps = (lo_s + steps) // 2
+        else: lo_s = steps; steps = (steps + hi_s) // 2
+    cat, cat_n, hm, steps = best
+    torch.save({"state": cat.state_dict(), "norm": cat_n,
+                "relay_held": hm, "catch_steps": steps}, f"{out}/catch.pt")
+    h1, _, O1, A1 = relay_rollout(swi, swi_n, cat, cat_n,
+        hang_starts(300, np.random.default_rng(0)), 600)
+    h2, _, O2, A2 = relay_rollout(swi, swi_n, cat, cat_n,
+        arrival_starts(200, np.random.default_rng(1)), 600)
+    O = np.concatenate([O1[h1], O2[h2]]); A = np.concatenate([A1[h1], A2[h2]])
+    np.savez_compressed(f"{out}/distill.npz", O=O, A=A)
+    sums = []
+    for f in ("swing.pt", "catch.pt", "distill.npz"):
+        h = hashlib.sha256(open(f"{out}/{f}", "rb").read()).hexdigest()
+        sums.append(f"{h}  {f}")
+    open(f"{out}/SHA256SUMS", "w").write("\n".join(sums) + "\n")
+    print(f"[{tag}] assets done: relay held {hm*100:.0f}%, "
+          f"{len(O)} episodes", flush=True)
+    return hm
+
+
 if __name__ == "__main__":
-    build_assets()
+    if len(sys.argv) > 1 and sys.argv[1] == "quality":
+        # q91 = the main assets, re-used; build q80 and q67 by calibration
+        import shutil
+        out91 = os.path.join(os.path.dirname(RELAY_DIR), "relay_q91")
+        os.makedirs(out91, exist_ok=True)
+        for f in ("swing.pt", "catch.pt", "distill.npz", "SHA256SUMS"):
+            shutil.copy(f"{RELAY_DIR}/{f}", f"{out91}/{f}")
+        print("[q91] reusing main relay assets", flush=True)
+        build_quality_variant("q80", 0.74, 0.86, 1000)
+        build_quality_variant("q67", 0.60, 0.73, 450)
+    else:
+        build_assets()

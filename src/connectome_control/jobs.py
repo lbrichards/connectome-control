@@ -170,12 +170,14 @@ def run_distill_bc(job):
     from .physics import rk4_batch
     torch.manual_seed(job["tseed"])
     net = _build_net(job["kind"], job["tseed"])
-    d = np.load(f"{RELAY_DIR}/distill.npz")
+    rd = job.get("relay_dir")
+    rd = (os.path.join(os.path.dirname(RELAY_DIR), rd) if rd else RELAY_DIR)
+    d = np.load(f"{rd}/distill.npz")
     O, A = d["O"], d["A"]
     norm, curve, _, _, _ = train_bc(O, A, net, job["steps"],
                                     seed=job["tseed"])
     for rnd in range(job.get("dagger", 1)):
-        swi, swi_n, cat, cat_n = load_relay()
+        swi, swi_n, cat, cat_n = load_relay(rd)
         # student drives; relay labels every visited state
         rng = np.random.default_rng(500 + rnd)
         starts = np.concatenate([hang_starts(150, rng),

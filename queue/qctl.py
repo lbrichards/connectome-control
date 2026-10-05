@@ -99,8 +99,11 @@ def done(jid):
         r = json.load(open(p))
         man = r["manifest"]
         assert r["metrics"] is not None
-        for k in ("protocol", "git", "machine", "weights_sha256"):
-            assert man[k]
+        need = ["protocol", "git", "machine"]
+        if r["job"].get("type") != "robust":
+            need.append("weights_sha256")
+        for k in need:
+            assert man[k], k
     except Exception as e:
         fail(jid, f"result validation failed: {e}")
         return

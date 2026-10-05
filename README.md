@@ -42,16 +42,22 @@ No credentials in the repo, ever. Deployment secrets (Vercel, R2, etc.) live in 
 
 ## Web demo model selection
 
-Rule (fixed, demo-side only — the research protocol is never altered for
-demo purposes): after batch-2 Tier 1 completes, candidates are the 20 worm
-seeds, and DEMO-GRADE requires all of (1) median time-to-first-sustained-
-catch <= 5 s from the demo start distribution (= training start
-distribution), (2) quiet-hold >= 80%, (3) conversion on catchable
-approaches >= 50%. Ship the median-by-held seed if it passes; otherwise
-the best-by-held passer, labelled "best of 20 seeds". Measured for this
-selection: 14/20 seeds pass; median (seed 5) failed on time-to-catch
-(5.7 s); the demo reset was also corrected to sample the training start
-distribution (a fixed symmetric start is out of distribution: the median
-seed NEVER catches from [0,0,pi+0.04,0]).
+Rule (fixed): after batch-2 Tier 1 completes, the demo ships the worm at the MEDIAN held-rate among the 20 seeds; if that median is below the 20% demo-grade bar, the BEST of the 20 seeds is shipped and labelled as such. No automatic pickup on thresholds at other times.
 
 Current selection: **v4 C. elegans, seed 16, best of 20 seeds (median failed demo-grade) (94% held, 4.3s to catch, 93% conversion) — criteria: ttc<=5s & quiet>=80% & convC>=50%**
+
+## Notes for protocol v5 (logged mid-study, v4 unchanged)
+
+- Pump-direction chatter audit (2026-10-05), prompted by the web demo's
+  classical controller buzzing at full force near rest. The demo bug was a
+  delay-induced limit cycle: deciding `sign(theta_dot cos theta)` from the
+  CURRENT state while the force lands one delay later reverses theta_dot
+  every tick (fixed in the demo only: pump on the queue-predicted state +
+  `tanh(20 d)` direction). The research stack was audited and is CLEAN —
+  `teacher_v4`'s one-RK4-step prediction through the pending action already
+  provides the delay compensation: 0 full-amplitude sign-flip transitions in
+  100 teacher closed-loop hang episodes, 0/429 distillation episodes, and 0
+  flips across all 20 batch-2 worm students (correlation with held therefore
+  undefined/moot). For v5, consider replacing `_pump`'s hard `sign()` with
+  `tanh(k d)` anyway for regularity near rest; no evidence it matters at
+  20 ms delay.

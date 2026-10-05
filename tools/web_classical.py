@@ -60,6 +60,11 @@ E_TARGET = 1.06 * (2 * M_POLE * G * LENGTH) - (2 * M_POLE * G * LENGTH)
 # energy datum is rest-upright = 0; hanging = -2 m g l. "6% above upright"
 # in mockup terms == E_TARGET = +0.06 * (2 m g l) above the upright datum.
 K_ENERGY = 28.0
+# demo-only chatter fix: smooth pump direction. The research teacher keeps
+# hard sign() (protocol v4 is frozen); tanh(K_DIR*thd*cos th) removes the
+# full-amplitude force alternation near rest without changing behaviour
+# once the swing is moving (tanh saturates by |thd*cos th| ~ 0.15).
+K_DIR = 20.0
 K_X, K_XD = 3.0, 4.0
 WALL, WALL_GAIN, WALL_DAMP = 1.5, 16.0, 2.0
 CATCH_ANGLE, CATCH_RATE = 0.30, 2.2
@@ -98,19 +103,24 @@ class DemoSim:
             self.mode = "catch"
         elif self.mode == "catch" and abs(th) > 1.0:
             self.mode = "swing"
+        p = self._predict_through_queue()
         if self.mode == "catch":
-            p = self._predict_through_queue()
             z = np.array([p[0], p[1], wrap(p[2]), p[3]])
             F = -float(K_D @ z)
         else:
-            e_err = E_TARGET - energy(s[2], s[3])
-            d = s[3] * np.cos(s[2])
-            s_dir = 1.0 if d >= 0 else -1.0
+            # pump on the PREDICTED post-delay state (same structure as the
+            # catch mode and the v4 research teacher): deciding the pump
+            # direction from the current theta_dot while the force lands
+            # 20 ms later creates a full-amplitude tick-rate limit cycle
+            # near rest (the delayed kick reverses theta_dot every tick).
+            e_err = E_TARGET - energy(p[2], p[3])
+            d = p[3] * np.cos(p[2])
+            s_dir = np.tanh(K_DIR * d)
             a = -K_ENERGY * e_err * s_dir
-            F = a * (M_CART + M_POLE) - K_X * s[0] - K_XD * s[1]
-            if abs(s[0]) > WALL:
-                F += -WALL_GAIN * (s[0] - np.sign(s[0]) * WALL) \
-                     - WALL_DAMP * s[1]
+            F = a * (M_CART + M_POLE) - K_X * p[0] - K_XD * p[1]
+            if abs(p[0]) > WALL:
+                F += -WALL_GAIN * (p[0] - np.sign(p[0]) * WALL) \
+                     - WALL_DAMP * p[1]
         return float(np.clip(F, -F_MAX, F_MAX))
 
     # ---- one 50 Hz tick --------------------------------------------------

@@ -78,6 +78,7 @@ function setMode(m: Mode): void {
   $("delayCtl").hidden = m !== "classical";
   $("delayFixed").hidden = m !== "worm";
   modelTag.hidden = m !== "worm";
+  $("classicalNote").hidden = m !== "classical";
   // physical state carries over; controller memory does not
   const s = [...sim.s] as State;
   sim = new DelaySim(plant, s, currentDelay());
@@ -245,6 +246,7 @@ async function boot(): Promise<void> {
   ($("delayFixed")).textContent = `Delay ${plant.delay_ms} ms, as trained`;
   sim = new DelaySim(plant, hangStart(), plant.delay_ms);
   panelSub.textContent = SUBS[mode];
+  $("classicalNote").hidden = mode !== "classical";
   reset();
   layout();
   requestAnimationFrame(frame);

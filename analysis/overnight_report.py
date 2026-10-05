@@ -114,7 +114,7 @@ def main():
     R = load_results()
     t1 = [r for r in R if r["job"].get("tier") == 1]
     t2 = [r for r in R if r["job"].get("tier") == 2]
-    t3 = [r for r in R if r["job"].get("tier") == 3]
+    t3 = [r for r in R if r["job"].get("tier") in (3, 9)]
     t4 = [r for r in R if r["job"].get("type") == "robust"]
 
     L = []
@@ -267,7 +267,16 @@ def main():
               "Tier 2: held at matched clone MSE", ylim=(-4, 100))
 
     # --- Tier 3 / Tier 4
-    L.append(f"\n## Tier 3 — dense-448 to convergence ({len(t3)} results)\n")
+    try:
+        c9 = sqlite3.connect(f"{Q}/queue.db")
+        n9 = dict(c9.execute("SELECT state, COUNT(*) FROM jobs WHERE tier=9 "
+                             "GROUP BY state").fetchall())
+        pend9 = n9.get("pending", 0) + n9.get("running", 0)
+    except Exception:
+        pend9 = 0
+    L.append(f"\n## Tier 3 — dense-448 to convergence ({len(t3)} results)"
+             + (f" — **STILL RUNNING: {pend9} job(s) outstanding**"
+                if pend9 else " — complete") + "\n")
     for r in t3:
         L.append(f"- seed {r['job']['tseed']}: "
                  f"{'hit' if r.get('hit_target') else 'CAP'} "

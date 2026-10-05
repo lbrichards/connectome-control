@@ -41,11 +41,16 @@ def cx():
     return c
 
 
-def counts(c, tier=None):
+def counts(c, tier=None, exclude9=False):
     q = "SELECT state, COUNT(*) FROM jobs"
     args = ()
+    w = []
     if tier is not None:
-        q += " WHERE tier=?"; args = (tier,)
+        w.append("tier=?"); args = (tier,)
+    if exclude9:
+        w.append("tier != 9")
+    if w:
+        q += " WHERE " + " AND ".join(w)
     q += " GROUP BY state"
     return dict(c.execute(q, args).fetchall())
 
@@ -169,11 +174,22 @@ def main():
                     and t1.get("running", 0) == 0
                     and t1.get("DONE", 0) > 0):
                 emit_tier4(c)
-            allc = counts(c)
-            if allc.get("pending", 0) == 0 and allc.get("running", 0) == 0 \
-                    and os.path.exists(f"{Q}/TIER4_EMITTED"):
-                log("queue drained; running finale")
+            main_c = counts(c, exclude9=True)
+            if (main_c.get("pending", 0) == 0 and main_c.get("running", 0) == 0
+                    and os.path.exists(f"{Q}/TIER4_EMITTED")
+                    and not os.path.exists(f"{Q}/FIRST_PASS_DONE")):
+                log("tiers 1/2/4 drained; running FIRST-PASS finale "
+                    "(dense-448 still running)")
                 finale()
+                open(f"{Q}/FIRST_PASS_DONE", "w").write(time.ctime())
+            t9 = counts(c, tier=9)
+            if (os.path.exists(f"{Q}/FIRST_PASS_DONE")
+                    and t9.get("pending", 0) == 0
+                    and t9.get("running", 0) == 0):
+                log("tier 3 (demoted) drained; second-pass report append")
+                subprocess.run([f"{REPO}/.venv/bin/python",
+                                f"{REPO}/analysis/overnight_report.py"])
+                log("second pass complete; pilot exiting")
                 return
             c.close()
         except Exception as e:

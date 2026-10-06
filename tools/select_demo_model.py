@@ -6,8 +6,9 @@ Demo-grade criteria, evaluated from the demo's start distribution
   1. median time-to-first-sustained-catch <= 5 s
   2. quiet-hold >= 80%
   3. conversion on catchable approaches >= 50%
-Selection: the MEDIAN-by-held seed if it passes all three; otherwise the
-BEST-by-held seed among passers, labelled "best of 20 seeds".
+Selection (rule of record since 2026-10-06): the BEST-by-held seed among
+demo-grade passers, for EVERY arm, labelled "best of 20 seeds" — a
+showcase-vs-showcase comparison across tabs.
 Writes web/demo_selection.json consumed by the exporter.
 """
 import glob, json, sys
@@ -33,13 +34,9 @@ for f in sorted(glob.glob(f"/Users/macmini/cc-queue/results/b2t1_{ARM}_*.json"))
 rows.sort(key=lambda x: x["held"])
 ok = lambda x: (x["ttc"] is not None and x["ttc"] <= 5.0
                 and x["quiet"] >= 0.80 and x["convc"] >= 0.50)
-med = rows[len(rows) // 2]
-if ok(med):
-    pick, how = med, "median of 20 seeds"
-else:
-    passers = [x for x in rows if ok(x)]
-    pick = max(passers, key=lambda x: x["held"])
-    how = "best of 20 seeds (median failed demo-grade)"
+passers = [x for x in rows if ok(x)]
+pick = max(passers, key=lambda x: x["held"])
+how = "best of 20 seeds"
 NAME = {"worm": "v4 C. elegans", "dense78": "v4 dense-78"}[ARM]
 label = (f"{NAME}, seed {pick['seed']}, {how} "
          f"({pick['held']*100:.0f}% held, {pick['ttc']:.1f}s to catch, "

@@ -182,11 +182,13 @@ def _record_in_readme(label):
     rp = f"{REPO}/README.md"
     s = open(rp).read()
     block = ("\n## Web demo model selection\n\n"
-             "Rule (fixed): after batch-2 Tier 1 completes, the demo ships "
-             "the worm at the MEDIAN held-rate among the 20 seeds; if that "
-             "median is below the 20% demo-grade bar, the BEST of the 20 "
-             "seeds is shipped and labelled as such. No automatic pickup "
-             "on thresholds at other times.\n\n"
+             "Rule (since 2026-10-06, both tabs): each arm ships its BEST "
+             "demo-grade seed of the 20 batch-2 seeds (time-to-catch <= "
+             "5 s, quiet-hold >= 80%, conversion on catchable >= 50%), "
+             "labelled 'best of 20 seeds' — showcase vs showcase. "
+             "Research claims are unaffected; note the research result is "
+             "NO ESTABLISHED DIFFERENCE between worm and dense-78 across "
+             "two teachers (pooled two-sided p = 0.078).\n\n"
              f"Current selection: **{label}**\n")
     if "## Web demo model selection" in s:
         import re
@@ -261,11 +263,11 @@ def _record_in_readme_dense(label):
     rp = f"{REPO}/README.md"
     s = open(rp).read()
     block = ("\n## Web demo dense-78 tab selection\n\n"
-             "Rule (same as the worm's): the dense-78 batch-2 seed at the "
-             "MEDIAN held-rate if it passes demo-grade (time-to-catch <= "
-             "5 s, quiet-hold >= 80%, conversion on catchable >= 50%); "
-             "otherwise the BEST passing seed, labelled 'best of 20 "
-             "seeds'. Tab blurb: \"" + DENSE_BLURB + "\"\n\n"
+             "Rule (same as the worm's, since 2026-10-06): the BEST "
+             "demo-grade seed of the 20, labelled 'best of 20 seeds'. "
+             "Tab blurb: \"" + DENSE_BLURB + "\" Research context: no "
+             "established worm/dense-78 difference across two teachers "
+             "(pooled).\n\n"
              f"Current selection: **{label}**\n")
     if "## Web demo dense-78 tab selection" in s:
         import re

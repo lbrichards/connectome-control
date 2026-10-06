@@ -42,9 +42,9 @@ No credentials in the repo, ever. Deployment secrets (Vercel, R2, etc.) live in 
 
 ## Web demo model selection
 
-Rule (fixed): after batch-2 Tier 1 completes, the demo ships the worm at the MEDIAN held-rate among the 20 seeds; if that median is below the 20% demo-grade bar, the BEST of the 20 seeds is shipped and labelled as such. No automatic pickup on thresholds at other times.
+Rule (since 2026-10-06, both tabs): each arm ships its BEST demo-grade seed of the 20 batch-2 seeds (time-to-catch <= 5 s, quiet-hold >= 80%, conversion on catchable >= 50%), labelled 'best of 20 seeds' — showcase vs showcase. Research claims are unaffected; note the research result is NO ESTABLISHED DIFFERENCE between worm and dense-78 across two teachers (pooled two-sided p = 0.078).
 
-Current selection: **v4 C. elegans, seed 16, best of 20 seeds (median failed demo-grade) (94% held, 4.3s to catch, 93% conversion) — criteria: ttc<=5s & quiet>=80% & convC>=50%**
+Current selection: **v4 C. elegans, seed 16, best of 20 seeds (94% held, 4.3s to catch, 93% conversion) — criteria: ttc<=5s & quiet>=80% & convC>=50%**
 
 ## Notes for protocol v5 (logged mid-study, v4 unchanged)
 
@@ -250,6 +250,6 @@ realized f. Anything further is exploratory and labelled.
 
 ## Web demo dense-78 tab selection
 
-Rule (same as the worm's): the dense-78 batch-2 seed at the MEDIAN held-rate if it passes demo-grade (time-to-catch <= 5 s, quiet-hold >= 80%, conversion on catchable >= 50%); otherwise the BEST passing seed, labelled 'best of 20 seeds'. Tab blurb: "A conventional dense network with the same number of connections (about 6,000)."
+Rule (same as the worm's, since 2026-10-06): the BEST demo-grade seed of the 20, labelled 'best of 20 seeds'. Tab blurb: "A conventional dense network with the same number of connections (about 6,000)." Research context: no established worm/dense-78 difference across two teachers (pooled).
 
-Current selection: **v4 dense-78, seed 5, median of 20 seeds (75% held, 2.9s to catch, 79% conversion) — criteria: ttc<=5s & quiet>=80% & convC>=50%**
+Current selection: **v4 dense-78, seed 2, best of 20 seeds (91% held, 3.0s to catch, 90% conversion) — criteria: ttc<=5s & quiet>=80% & convC>=50%**

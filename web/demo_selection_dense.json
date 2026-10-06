@@ -1,12 +1,12 @@
 {
- "pt": "/Users/macmini/cc-queue/results/b2t1_dense78_s5_0320ffc1a9cc6457.pt",
- "seed": 5,
- "label": "v4 dense-78, seed 5, median of 20 seeds (75% held, 2.9s to catch, 79% conversion)",
+ "pt": "/Users/macmini/cc-queue/results/b2t1_dense78_s2_2a2044430dd889a9.pt",
+ "seed": 2,
+ "label": "v4 dense-78, seed 2, best of 20 seeds (91% held, 3.0s to catch, 90% conversion)",
  "criteria": "ttc<=5s & quiet>=80% & convC>=50%",
  "metrics": {
-  "held": 0.75,
-  "quiet": 0.96,
-  "convc": 0.7857142857142857,
-  "ttc": 2.88
+  "held": 0.91,
+  "quiet": 1.0,
+  "convc": 0.896551724137931,
+  "ttc": 2.96
  }
 }

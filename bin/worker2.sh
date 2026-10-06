@@ -28,14 +28,17 @@ while true; do
   ( while true; do sleep 60
       ssh -o BatchMode=yes "$COORD" "$QPY heartbeat $JID" >/dev/null 2>&1 || true
     done ) & HB=$!
+  # log goes straight into logs/ (excluded from deploy's --delete): a job's
+  # success must never depend on a repo-root scratch file surviving.
+  mkdir -p results logs
   .venv/bin/python -m connectome_control.jobs /tmp/ccjob.$$.json \
-      > "results_logs_$JID.log" 2>&1
+      > "logs/$JID.log" 2>&1
   RC=$?
   kill $HB 2>/dev/null; wait $HB 2>/dev/null
-  mkdir -p results logs && mv -f "results_logs_$JID.log" "logs/$JID.log"
   if [ $RC -eq 0 ] && [ -f "results/$JID.json" ]; then
-    if scp -q "results/$JID.json" "results/$JID.pt" "logs/$JID.log" \
+    if scp -q "results/$JID.json" "results/$JID.pt" \
           "${COORD}:cc-queue/results/" ; then
+      scp -q "logs/$JID.log" "${COORD}:cc-queue/results/" 2>/dev/null || true
       ssh -o BatchMode=yes "$COORD" "$QPY done $JID" >/dev/null
     else
       # sync failed; leave local result, try again on next contact

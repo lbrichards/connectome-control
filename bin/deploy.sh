@@ -7,6 +7,7 @@ REPO=$(cd "$(dirname "$0")/.." && pwd)
 ssh "$H" "mkdir -p ~/projects/connectome-control"
 git -C "$REPO" rev-parse HEAD > "$REPO/COMMIT_STAMP"
 rsync -a --delete --exclude .git --exclude .venv --exclude results \
+      --exclude "results_logs_*" --exclude "*.log" \
       --exclude __pycache__ --exclude logs --exclude node_modules \
       "$REPO/" "$H:projects/connectome-control/"
 ssh "$H" 'cd ~/projects/connectome-control

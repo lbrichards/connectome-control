@@ -70,4 +70,18 @@ def loadB():
 
 
 if __name__ == "__main__":
-    {"loadA": loadA, "loadB": loadB}[sys.argv[1]]()
+    {"loadA": loadA, "loadB": loadB, "loadT": loadT}[sys.argv[1]]()
+
+
+def loadT():
+    """Targeted-rewiring extension (pre-registered): tier 2, behind Task B."""
+    jobs = []
+    for v in ("S", "X"):
+        for g in range(8):
+            for t in (0, 1):
+                cfg = dict(type="distill_bc", kind=f"rw{v}g{g}", tseed=t,
+                           tier=2, cost=2, **STD)
+                h = jid(cfg)
+                cfg["id"] = f"b4{h[:4]}T_{cfg['kind']}_s{t}_{h[4:12]}"
+                jobs.append(cfg)
+    _load(jobs, "T")

@@ -233,15 +233,14 @@ chem + chem^T + gap, diagonal zeroed; "directed graph" = binarized chem):
     AVBR), unnormalized (stated as such; no null-model normalization).
 
 PRIMARY (pre-registered): Spearman correlation of each property with
-per-graph mean held across the 90 shuffled graphs; Holm over the 10
-properties (reciprocity-overall is THE registered variant of #1; the
-neuron->neuron variant and motif #2's two counts are registered
-separately: the 10 tests are reciprocity-overall, FFL, 3-cycle,
-near-input cycles (2cyc+3cyc within 2 hops, summed), input->effector
-path length, 2-hop reach, LSCC size, spectral radius, clustering,
-modularity, rich-club@77 -- enumerated: 11; the FIRST TEN as listed here
-are the Holm family, rich-club@77 included, near-input cycles counted
-once).
+per-graph mean held across the 90 shuffled graphs; Holm over exactly
+these 10 tests: (1) reciprocity-overall, (2) FFL count, (3) 3-cycle
+count, (4) near-input cycles (2-cycles + 3-cycles within 2 hops of
+inputs, one summed statistic), (5) input->effector mean path length,
+(6) 2-hop reach, (7) LSCC size, (8) spectral radius, (9) clustering,
+(10) modularity. Rich-club@77 and neuron->neuron reciprocity are
+reported alongside but OUTSIDE the Holm family (register note: family
+fixed at these 10 before any computation).
 Out-of-sample: ridge regression (alpha chosen by LOO-CV on relay-A
 graphs only, standardized properties) trained on the 60 relay-A graphs,
 predicting the 30 relay-B graphs; report Spearman(predicted, observed).

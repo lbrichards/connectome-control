@@ -118,5 +118,31 @@ def loadG():
     _load(jobs, "G")
 
 
+def loadH():
+    """Definitive worm-vs-dense sample (pre-registered): 40 seeds/cell.
+    Tier 5, strictly behind Task G."""
+    jobs = []
+    for t in range(20, 40):               # relay A top-ups
+        for kind in ("worm", "dense78"):
+            cfg = dict(type="distill_bc", kind=kind, tseed=t,
+                       tier=5, cost=2, **STD)
+            h = jid(cfg)
+            cfg["id"] = f"b4{h[:4]}H_{kind}_s{t}_{h[4:12]}"
+            jobs.append(cfg)
+    for t in range(20, 40):               # relay B worm top-up
+        cfg = dict(type="distill_bc", kind="worm", tseed=t,
+                   relay_dir="relay_B", tier=5, cost=2, **STD)
+        h = jid(cfg)
+        cfg["id"] = f"b4{h[:4]}H_worm_s{t}_{h[4:12]}"
+        jobs.append(cfg)
+    for t in range(10, 40):               # relay B dense top-up
+        cfg = dict(type="distill_bc", kind="dense78", tseed=t,
+                   relay_dir="relay_B", tier=5, cost=2, **STD)
+        h = jid(cfg)
+        cfg["id"] = f"b4{h[:4]}H_dense78_s{t}_{h[4:12]}"
+        jobs.append(cfg)
+    _load(jobs, "H")
+
+
 if __name__ == "__main__":
-    {"loadA": loadA, "loadB": loadB, "loadT": loadT, "loadF": loadF, "loadG": loadG}[sys.argv[1]]()
+    {"loadA": loadA, "loadB": loadB, "loadT": loadT, "loadF": loadF, "loadG": loadG, "loadH": loadH}[sys.argv[1]]()

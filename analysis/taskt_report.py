@@ -126,8 +126,10 @@ def main():
           f"- Both conditions vs worm (f=0, median "
           f"{np.median(w)*100:.0f}%): two-sided MW rwS p="
           f"{mannwhitneyu(S, w)[1]:.3f}, rwX p="
-          f"{mannwhitneyu(X, w)[1]:.3f} — ~200 moved edges already cost "
-          f"a detectable share of performance."]
+          f"{mannwhitneyu(X, w)[1]:.3f} — point estimates sit ~12-16 pts "
+          f"below the worm, directionally consistent with the Task-A "
+          f"dose-response, but neither reaches significance at "
+          f"n=16 vs 20."]
 
     out = f"{Q}/TASKT_REPORT.md"
     open(out, "w").write("\n".join(L) + "\n")

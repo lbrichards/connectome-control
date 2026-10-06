@@ -61,3 +61,64 @@ Current selection: **v4 C. elegans, seed 16, best of 20 seeds (median failed dem
   undefined/moot). For v5, consider replacing `_pump`'s hard `sign()` with
   `tanh(k d)` anyway for regularity near rest; no evidence it matters at
   20 ms delay.
+
+## PRE-REGISTRATION (2026-10-06, committed before any Task A/B results)
+
+Protocol v4 throughout; same fleet rules (manifests, leases <=180 s with
+heartbeats, <=2 retries, halt conditions, determinism spot checks: 2 DONE
+jobs re-run on a second host must match weights sha256 bitwise).
+
+### Task A — partial rewiring of the worm
+
+Graphs: rewire a fraction f of worm edges by typed, degree-preserving
+double-edge swaps (identical move set and class rules as the batch-2 typed
+shuffle), stopping when the fraction of ORIGINAL edges no longer present
+reaches the target. f is always REALIZED f, measured per graph against the
+original edge set (chem directed + gap undirected pairs, diagonal gap
+excluded) and recorded in the manifest. Targets: 0.10, 0.25, 0.50, 0.75.
+Measured constraint, stated in advance: a full typed shuffle realizes only
+f ~= 0.91 (typed degree preservation forces ~9% edge overlap), so the
+curve's right endpoint is the batch-2 shuffle arm at realized f ~= 0.91,
+NOT f = 1. Endpoints REUSE batch 2 unchanged: f=0 = the 20 batch-2 worm
+runs; f~=0.91 = the 60 batch-2 shuffle runs. All Task-A jobs use the
+IDENTICAL batch-2 relay assets, distillation dataset, training budget
+(steps=3000, dagger=1, dagger_steps=2000) and eval (100 ep x 1000 steps).
+Per target level: 8 independent graphs (rewire seeds 0-7) x 2 training
+seeds (0, 1) = 16 runs; 64 new jobs total.
+
+Robustness: run_robust (seed 777, unchanged) on EVERY Task-A model plus
+reuse of the batch-2 endpoint models' existing suites; no gate.
+
+PRIMARY (pre-registered): (1) Jonckheere-Terpstra test for a DECREASING
+trend of per-run held-rate across the 6 ordered levels (f = 0, 0.10, 0.25,
+0.50, 0.75, ~0.91), permutation p (10,000 label permutations within the
+pooled sample, JT statistic, one-sided). (2) f50: fit a 4-parameter
+logistic held_med(f) = L + (U - L) / (1 + exp(k (f - f0))) to the six
+level medians against mean realized f per level; f50 is the realized f
+where the fitted curve crosses the midpoint of its fitted values at the
+two endpoints. CI: bootstrap runs within each level (1,000 resamples,
+percentile 2.5/97.5). SECONDARY: same JT trend test on per-model kick-AUC
+and noise-AUC (mean survival across the 3 levels, as in the batch-2
+supplement), Holm across these 2 tests. Anything else is exploratory and
+will be labelled as such.
+
+### Task B — replication with a second relay (relay B)
+
+Relay B: built with relay.py exactly as the batch-2 relay (relay A) but
+with NEW brain seeds (swing seed 10, catch seed 11); same stage gates
+(swing reach >= 85%, catch held >= 90%, relay held >= 50%); relay B's
+held-rate recorded before any student training. Students (all distilled
+from relay B, batch-2 budget unchanged): worm x training seeds 0-19 (same
+init seeds as batch 2, enabling a paired exploratory comparison), typed
+shuffle x 30 NEW graphs (seeds 200-229; disjoint from batch-2 graphs 0-59
+and batch-3 graphs) x 1 seed, dense-78 x training seeds 0-9. 60 jobs.
+Robustness suite on every model, no gate.
+
+PRIMARY (pre-registered): worm vs shuffle held-rate, one-sided
+Mann-Whitney (worm > shuffle), plus the worm median's percentile within
+the 30-graph shuffle distribution. SECONDARY: kick-AUC and noise-AUC worm
+vs shuffle (one-sided MW, Holm across the 2); worm vs dense-78 held-rate
+(two-sided MW). Report relay B results side by side with relay A
+(batch 2) for every endpoint. Replication criterion, stated in advance:
+the worm-vs-shuffle held-rate direction reproduces with one-sided
+p < 0.05.

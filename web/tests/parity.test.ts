@@ -37,6 +37,27 @@ describe("plant + worm parity", () => {
   });
 });
 
+describe("plant + dense parity", () => {
+  it("replays the dense fixture within tolerance", () => {
+    const f = fx("dense_fixture.json");
+    const dm = JSON.parse(readFileSync(
+      new URL("../public/models/dense_v4.json", import.meta.url),
+      "utf8")) as WormModel;
+    const plant = f.plant as Plant;
+    const sim = new DelaySim(plant, f.s0 as State, plant.delay_ms);
+    const net = new Worm(dm);
+    let worst = 0;
+    for (let k = 0; k < f.ticks; k++) {
+      const s = sim.s;
+      const u = net.force([s[0], Math.sin(s[2]), Math.cos(s[2])]);
+      expect(Math.abs(u - f.forces[k])).toBeLessThan(1e-4);
+      sim.tick(u);
+      worst = Math.max(worst, maxErr(sim.s, f.states[k]));
+    }
+    expect(worst).toBeLessThan(f.tolerance_abs);
+  });
+});
+
 describe("plant + classical parity", () => {
   it("replays the classical fixture within tolerance", () => {
     const f = fx("classical_fixture.json");

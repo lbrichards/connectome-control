@@ -69,9 +69,10 @@ def pick_batch2_worm():
                    f"({best[0]*100:.0f}% held; median was not demo-grade)",)
 
 
-def export_model(pt_path, held, tseed, label):
+def export_model(pt_path, held, tseed, label, kind="worm",
+                 out_name="worm_v4.json"):
     ck = torch.load(pt_path, weights_only=False)
-    chem, gap, in_idx, n = build_graph("worm")
+    chem, gap, in_idx, n = build_graph(kind)
     net = ConnectomeRNN(chem, gap, np.asarray(in_idx, np.int64),
                         np.arange(n, dtype=np.int64), n_in=3, n_out=1,
                         seed=tseed, spectral_radius=1.3, in_gain=2.0,
@@ -105,11 +106,11 @@ def export_model(pt_path, held, tseed, label):
         "o_mu": [float(v) for v in o_mu], "o_sd": [float(v) for v in o_sd],
         "a_mu": float(a_mu), "a_sd": float(a_sd),
     }
-    out = f"{REPO}/web/public/models/worm_v4.json"
+    out = f"{REPO}/web/public/models/{out_name}"
     os.makedirs(os.path.dirname(out), exist_ok=True)
     json.dump(model, open(out, "w"))
     kb = os.path.getsize(out) // 1024
-    print(f"model -> web/public/models/worm_v4.json ({kb} KB)  [{label}]")
+    print(f"model -> web/public/models/{out_name} ({kb} KB)  [{label}]")
     return net, norm
 
 
@@ -204,6 +205,7 @@ def main():
                                  d["seed"], d["label"])
         _record_in_readme(d["label"] + f" — criteria: {d['criteria']}")
         _fixtures(net, norm)
+        export_dense()
         return
     pick = pick_batch2_worm()
     if pick is not None:
@@ -220,16 +222,58 @@ def main():
     _fixtures(net, norm)
 
 
-def _fixtures(net, norm):
-    model_json = json.load(open(f"{REPO}/web/public/models/worm_v4.json"))
+def _fixtures(net, norm, model_name="worm_v4.json",
+              fixture_name="worm_fixture.json", tag="worm"):
+    model_json = json.load(open(f"{REPO}/web/public/models/{model_name}"))
     fx = worm_fixture_from_json(model_json)
+    fx["controller"] = tag
     os.makedirs(f"{REPO}/shared/fixtures", exist_ok=True)
-    json.dump(fx, open(f"{REPO}/shared/fixtures/worm_fixture.json", "w"))
+    json.dump(fx, open(f"{REPO}/shared/fixtures/{fixture_name}", "w"))
     fc = classical_fixture()
     json.dump(fc, open(f"{REPO}/shared/fixtures/classical_fixture.json", "w"))
     up = sum(1 for s in fx["states"] if abs(wrap(s[2])) < np.radians(12))
-    print(f"fixtures -> shared/fixtures/ (worm time-up in fixture: "
+    print(f"fixtures -> shared/fixtures/ ({tag} time-up in fixture: "
           f"{up/len(fx['states'])*100:.0f}%)")
+
+
+DENSE_BLURB = ("A conventional dense network with the same number of "
+               "connections (about 6,000).")
+
+
+def export_dense():
+    """Dense-78 demo tab (same selection rule as the worm; selection
+    recorded in README). No-op until web/demo_selection_dense.json exists."""
+    sel = f"{REPO}/web/demo_selection_dense.json"
+    if not os.path.exists(sel):
+        print("no demo_selection_dense.json; skipping dense export")
+        return
+    d = json.load(open(sel))
+    label = d["label"] + f" — criteria: {d['criteria']}"
+    net, norm = export_model(d["pt"], d["metrics"]["held"], d["seed"],
+                             d["label"], kind="dense78",
+                             out_name="dense_v4.json")
+    _record_in_readme_dense(label)
+    _fixtures(net, norm, model_name="dense_v4.json",
+              fixture_name="dense_fixture.json", tag="dense")
+
+
+def _record_in_readme_dense(label):
+    rp = f"{REPO}/README.md"
+    s = open(rp).read()
+    block = ("\n## Web demo dense-78 tab selection\n\n"
+             "Rule (same as the worm's): the dense-78 batch-2 seed at the "
+             "MEDIAN held-rate if it passes demo-grade (time-to-catch <= "
+             "5 s, quiet-hold >= 80%, conversion on catchable >= 50%); "
+             "otherwise the BEST passing seed, labelled 'best of 20 "
+             "seeds'. Tab blurb: \"" + DENSE_BLURB + "\"\n\n"
+             f"Current selection: **{label}**\n")
+    if "## Web demo dense-78 tab selection" in s:
+        import re
+        s = re.sub(r"\n## Web demo dense-78 tab selection\n.*?(?=\n## |\Z)",
+                   block, s, flags=re.S)
+    else:
+        s += block
+    open(rp, "w").write(s)
 
 
 if __name__ == "__main__":

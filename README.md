@@ -247,3 +247,9 @@ predicting the 30 relay-B graphs; report Spearman(predicted, observed).
 Placement: predict the worm and the Task-A rewired graphs from the same
 model; report predicted-vs-observed and whether prediction declines with
 realized f. Anything further is exploratory and labelled.
+
+## Web demo dense-78 tab selection
+
+Rule (same as the worm's): the dense-78 batch-2 seed at the MEDIAN held-rate if it passes demo-grade (time-to-catch <= 5 s, quiet-hold >= 80%, conversion on catchable >= 50%); otherwise the BEST passing seed, labelled 'best of 20 seeds'. Tab blurb: "A conventional dense network with the same number of connections (about 6,000)."
+
+Current selection: **v4 dense-78, seed 5, median of 20 seeds (75% held, 2.9s to catch, 79% conversion) — criteria: ttc<=5s & quiet>=80% & convC>=50%**

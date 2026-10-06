@@ -8,7 +8,7 @@ import { Worm, WormModel } from "./controllers/worm";
 
 const PUSH = 1.6, HIST = 500, OUT_GAP = 30, UP_TOL = 0.21;
 
-type Mode = "classical" | "worm";
+type Mode = "classical" | "worm" | "dense";
 interface HistPoint { x: number; xd: number; th: number; thd: number; u: number }
 
 const $ = <T extends HTMLElement>(id: string) =>
@@ -37,14 +37,22 @@ const LANES: Record<Mode, Lane[]> = {
     { name: "cos θ", unit: "", get: (h) => Math.cos(h.th), lo: -1, hi: 1 },
     { name: "force", unit: "N", get: (h) => h.u, lo: -18, hi: 18, out: true },
   ],
+  dense: [
+    { name: "x", unit: "m", get: (h) => h.x, lo: -3, hi: 3 },
+    { name: "sin θ", unit: "", get: (h) => Math.sin(h.th), lo: -1, hi: 1 },
+    { name: "cos θ", unit: "", get: (h) => Math.cos(h.th), lo: -1, hi: 1 },
+    { name: "force", unit: "N", get: (h) => h.u, lo: -18, hi: 18, out: true },
+  ],
 };
 const SUBS: Record<Mode, string> = {
   classical: "Full state, θ = 0 upright, plus the actions it has already committed during the delay.",
   worm: "Positions only, θ = 0 upright. No velocities and no record of its own actions: the network infers what it needs from its own memory.",
+  dense: "Positions only, θ = 0 upright — the same inputs as the worm, at a fixed 20 ms delay.",
 };
 
 let plant: Plant;
 let worm: Worm | null = null;
+let dense: Worm | null = null;
 let classical: Classical;
 let mode: Mode = "classical";
 let sim: DelaySim;
@@ -75,15 +83,18 @@ function setMode(m: Mode): void {
   mode = m;
   $("modeClassical").setAttribute("aria-pressed", String(m === "classical"));
   $("modeWorm").setAttribute("aria-pressed", String(m === "worm"));
+  $("modeDense").setAttribute("aria-pressed", String(m === "dense"));
   $("delayCtl").hidden = m !== "classical";
-  $("delayFixed").hidden = m !== "worm";
+  $("delayFixed").hidden = m === "classical";
   modelTag.hidden = m !== "worm";
+  $("denseTag").hidden = m !== "dense";
   $("classicalNote").hidden = m !== "classical";
   // physical state carries over; controller memory does not
   const s = [...sim.s] as State;
   sim = new DelaySim(plant, s, currentDelay());
   classical.reset();
   worm?.reset();
+  dense?.reset();
   panelSub.textContent = SUBS[m];
   layout();
 }
@@ -96,9 +107,12 @@ function push(dir: number): void {
 function tick(): void {
   let u = 0;
   if (mode === "classical") u = classical.force(sim);
-  else if (worm) {
-    const s = sim.s;
-    u = worm.force([s[0], Math.sin(s[2]), Math.cos(s[2])]);
+  else {
+    const net = mode === "worm" ? worm : dense;
+    if (net) {
+      const s = sim.s;
+      u = net.force([s[0], Math.sin(s[2]), Math.cos(s[2])]);
+    }
   }
   sim.tick(u);
   upright = Math.abs(wrap(sim.s[2])) < UP_TOL ? upright + 1 / plant.ctrl_hz : 0;
@@ -240,6 +254,19 @@ async function boot(): Promise<void> {
     K: model.classical.K, energyTarget: model.classical.energy_target,
   });
   modelTag.textContent = `Model: ${model.label}`;
+  try {
+    const rd = await fetch("/models/dense_v4.json");
+    if (rd.ok) {
+      const dm = (await rd.json()) as WormModel;
+      dense = new Worm(dm);
+      $("denseTag").textContent =
+        `A conventional dense network with the same number of connections (about 6,000). Model: ${dm.label}`;
+    } else {
+      $("modeDense").hidden = true;
+    }
+  } catch {
+    $("modeDense").hidden = true;
+  }
   classicalDelayMs = plant.delay_ms;
   delayInput.value = String(plant.delay_ms);
   delayOut.textContent = `${plant.delay_ms} ms`;
@@ -255,6 +282,7 @@ async function boot(): Promise<void> {
 // ---- events
 $("modeClassical").onclick = () => setMode("classical");
 $("modeWorm").onclick = () => setMode("worm");
+$("modeDense").onclick = () => setMode("dense");
 $("reset").onclick = () => reset();
 pauseBtn.onclick = () => {
   paused = !paused;

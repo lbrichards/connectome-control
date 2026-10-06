@@ -15,8 +15,10 @@ while true; do
   RC=$?
   if [ $RC -eq 3 ]; then echo "[$ME] queue HALTED; exiting"; break; fi
   if [ $RC -ne 0 ] || [ -z "$JOB" ]; then
-    EMPTY=$((EMPTY+1)); [ $EMPTY -ge 5 ] && break
-    sleep 20; continue
+    # patient idle: multi-phase batches have gaps (teacher rebuilds, next
+    # tier loading). 240 x 30 s = 2 h idle before exit; HALT still instant.
+    EMPTY=$((EMPTY+1)); [ $EMPTY -ge 240 ] && { echo "[$ME] idle 2h; exiting"; break; }
+    sleep 30; continue
   fi
   EMPTY=0
   echo "$JOB" > /tmp/ccjob.$$.json

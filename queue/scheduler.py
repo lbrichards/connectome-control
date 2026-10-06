@@ -67,9 +67,15 @@ def status(c):
     s = {"time": time.ctime(), "tiers": {k: dict(v) for k, v in tiers.items()},
          "hosts": hosts, "pending": pend, "running": run, "eta_hours": eta_h,
          "halted": os.path.exists(f"{Q}/HALT")}
+    alerts = []
+    if os.path.exists(f"{Q}/ALERTS"):
+        alerts = open(f"{Q}/ALERTS").read().splitlines()[-5:]
+    s["alerts"] = alerts
     json.dump(s, open(f"{Q}/status.json", "w"), indent=1)
     with open(f"{Q}/status.txt", "w") as f:
         f.write(json.dumps(s, indent=1))
+        if alerts:
+            f.write("\n\nRECENT ALERTS (keeper):\n" + "\n".join(alerts) + "\n")
     return s
 
 

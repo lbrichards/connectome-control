@@ -107,7 +107,8 @@ def main():
              f"{np.median(w)*100:.0f}% vs {np.median(d)*100:.0f}% "
              f"(n={len(d)}); p={p2:.2f} — the relay-A dense advantage "
              f"(p=0.036) does NOT reproduce under relay B; see "
-             f"STRATIFIED_SUPPLEMENT.md (pooled two-sided p=0.078).", "")
+             f"STRATIFIED_SUPPLEMENT.md (pooled two-sided p=0.078).")
+    L.append("")
 
     # side-by-side + batch-3 context
     b2 = {"worm": [], "shuffle": []}

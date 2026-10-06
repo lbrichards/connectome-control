@@ -166,15 +166,16 @@ def load_relay(relay_dir=None):
     return swi, swi_n, cat, cat_n
 
 
-def build_assets():
-    os.makedirs(RELAY_DIR, exist_ok=True)
-    swi, swi_n = train_swing()
+def build_assets(out_dir=None, swing_seed=0, catch_seed=1):
+    rd = out_dir or RELAY_DIR
+    os.makedirs(rd, exist_ok=True)
+    swi, swi_n = train_swing(seed=swing_seed)
     torch.save({"state": swi.state_dict(), "norm": swi_n},
-               f"{RELAY_DIR}/swing.pt")
-    cat, cat_n, ch = train_catch()
+               f"{rd}/swing.pt")
+    cat, cat_n, ch = train_catch(seed=catch_seed)
     assert ch >= 0.90, f"CATCH GATE FAILED: {ch:.2f}"
     torch.save({"state": cat.state_dict(), "norm": cat_n},
-               f"{RELAY_DIR}/catch.pt")
+               f"{rd}/catch.pt")
     held, up, _, _ = relay_rollout(swi, swi_n, cat, cat_n,
         hang_starts(200, np.random.default_rng(999)), 1000)
     print(f"relay: held {held.mean()*100:.0f}%", flush=True)
@@ -185,14 +186,15 @@ def build_assets():
         arrival_starts(200, np.random.default_rng(1)), 600)
     O = np.concatenate([O1[h1], O2[h2]])
     A = np.concatenate([A1[h1], A2[h2]])
-    np.savez_compressed(f"{RELAY_DIR}/distill.npz", O=O, A=A)
+    np.savez_compressed(f"{rd}/distill.npz", O=O, A=A)
     print(f"distill dataset: {len(O)} episodes", flush=True)
     sums = []
     for f in ("swing.pt", "catch.pt", "distill.npz"):
-        h = hashlib.sha256(open(f"{RELAY_DIR}/{f}", "rb").read()).hexdigest()
+        h = hashlib.sha256(open(f"{rd}/{f}", "rb").read()).hexdigest()
         sums.append(f"{h}  {f}")
-    open(f"{RELAY_DIR}/SHA256SUMS", "w").write("\n".join(sums) + "\n")
-    print("relay assets complete + checksummed", flush=True)
+    open(f"{rd}/SHA256SUMS", "w").write("\n".join(sums) + "\n")
+    print(f"relay assets complete + checksummed -> {rd}", flush=True)
+    return float(held.mean())
 
 
 def build_quality_variant(tag, target_lo, target_hi, catch_steps0):
@@ -251,5 +253,11 @@ if __name__ == "__main__":
         print("[q91] reusing main relay assets", flush=True)
         build_quality_variant("q80", 0.74, 0.86, 1000)
         build_quality_variant("q67", 0.60, 0.73, 450)
+    elif len(sys.argv) > 1 and sys.argv[1] == "relayB":
+        # Task B: second teacher from NEW seeds (pre-registered: 10/11),
+        # same gates. Held-rate recorded in relay_B/HELD.
+        out = os.path.join(os.path.dirname(RELAY_DIR), "relay_B")
+        hm = build_assets(out_dir=out, swing_seed=10, catch_seed=11)
+        open(f"{out}/HELD", "w").write(f"{hm:.4f}\n")
     else:
         build_assets()

@@ -171,14 +171,14 @@ def node_classes(names):
     return np.array([nm[0].isupper() for nm in names])      # True = neuron
 
 
-def _swap_rewire_directed(edges, rng, passes=10):
+def _swap_rewire_directed(edges, rng, passes=10, attempts=None):
     """edges: list of [i, j, w] with i=post, j=pre. Swap targets i between
     same-class edge pairs. Preserves in/out degree exactly."""
     E = [list(e) for e in edges]
     n = len(E)
     existing = set((e[0], e[1]) for e in E)
     swaps = 0
-    for _ in range(passes * n):
+    for _ in range(attempts if attempts is not None else passes * n):
         a, b = rng.integers(0, n, 2)
         if a == b: continue
         ia, ja, _ = E[a]; ib, jb, _ = E[b]
@@ -192,7 +192,7 @@ def _swap_rewire_directed(edges, rng, passes=10):
     return E, swaps
 
 
-def _swap_rewire_symmetric(pairs, rng, passes=10):
+def _swap_rewire_symmetric(pairs, rng, passes=10, attempts=None):
     """pairs: list of [i, j, w], i<j, symmetric edges. Swap partners within
     class. Preserves each node's gap degree exactly."""
     E = [list(e) for e in pairs]
@@ -200,7 +200,7 @@ def _swap_rewire_symmetric(pairs, rng, passes=10):
     key = lambda i, j: (min(i, j), max(i, j))
     existing = set(key(e[0], e[1]) for e in E)
     swaps = 0
-    for _ in range(passes * n):
+    for _ in range(attempts if attempts is not None else passes * n):
         a, b = rng.integers(0, n, 2)
         if a == b: continue
         ia, ja, _ = E[a]; ib, jb, _ = E[b]
@@ -277,14 +277,88 @@ def verify(chem, gap, chem2, gap2, is_neuron):
 
 
 
+# ===== partial typed rewiring (Task A) =====
+
+def partial_rewire(chem, gap, is_neuron, target_f, seed, verbose=False):
+    """Rewire a FRACTION of worm edges by the same typed, degree-preserving
+    double-edge swaps as typed_shuffle, stopping once the realized fraction
+    of ORIGINAL edges no longer present reaches target_f. Swap attempts are
+    spread round-robin across classes in small increments (2% of class size)
+    so the stop is precise; swaps may re-create destroyed originals, so f is
+    always measured against the original edge sets, never counted.
+    Returns (chem2, gap2, realized_f). Deterministic in (target_f, seed)."""
+    rng = np.random.default_rng(seed)
+    n = len(is_neuron)
+
+    ii, jj = np.nonzero(chem)
+    cls = (is_neuron[jj].astype(int) * 2 + is_neuron[ii].astype(int))
+    chem_classes = []
+    for cl in np.unique(cls):
+        sel = cls == cl
+        chem_classes.append([[int(i), int(j), float(chem[i, j])]
+                             for i, j in zip(ii[sel], jj[sel])])
+    iu = np.triu_indices(n, k=1)
+    mask = gap[iu] > 0
+    pi, pj = iu[0][mask], iu[1][mask]
+    gcls = is_neuron[pi].astype(int) + is_neuron[pj].astype(int)
+    gap_classes = []
+    for cl in np.unique(gcls):
+        sel = gcls == cl
+        gap_classes.append([[int(a), int(b), float(gap[a, b])]
+                            for a, b in zip(pi[sel], pj[sel])])
+
+    orig_c = set((i, j) for E in chem_classes for i, j, _ in E)
+    orig_g = set((min(a, b), max(a, b))
+                 for E in gap_classes for a, b, _ in E)
+    total = len(orig_c) + len(orig_g)
+
+    def realized():
+        kept = sum((i, j) in orig_c for E in chem_classes for i, j, _ in E)
+        kept += sum((min(a, b), max(a, b)) in orig_g
+                    for E in gap_classes for a, b, _ in E)
+        return 1 - kept / total
+
+    f = 0.0
+    for _ in range(600):
+        if f >= target_f:
+            break
+        for k, E in enumerate(chem_classes):
+            E2, _ = _swap_rewire_directed(
+                E, rng, attempts=max(1, int(0.02 * len(E))))
+            chem_classes[k] = E2
+        for k, E in enumerate(gap_classes):
+            E2, _ = _swap_rewire_symmetric(
+                E, rng, attempts=max(1, int(0.02 * len(E))))
+            gap_classes[k] = E2
+        f = realized()
+    if verbose:
+        print(f"  partial_rewire target {target_f:.2f} -> realized {f:.3f}")
+
+    out_chem = np.zeros_like(chem)
+    for E in chem_classes:
+        for i, j, w in E:
+            out_chem[i, j] = w
+    out_gap = np.zeros_like(gap)
+    np.fill_diagonal(out_gap, np.diag(gap))
+    for E in gap_classes:
+        for a, b, w in E:
+            out_gap[a, b] = w; out_gap[b, a] = w
+    return out_chem, out_gap, f
+
+
 # ------------------------------------------------------- graph arms by name
 
 def build_graph(kind: str):
     """Graph spec -> (chem, gap, input_idx, n). Kinds: worm | shuffle<g> |
-    dense78 | dense448."""
+    rw<pct>g<g> (partial rewire, e.g. rw25g3) | dense78 | dense448."""
     c = load()
     if kind == "worm":
         return c.chem, c.gap, c.sensory, c.n
+    if kind.startswith("rw"):
+        pct, g = kind[2:].split("g")
+        ch, gp, _ = partial_rewire(c.chem, c.gap, node_classes(c.names),
+                                   int(pct) / 100.0, seed=int(g))
+        return ch, gp, c.sensory, c.n
     if kind.startswith("shuffle"):
         g = int(kind[7:])
         ch, gp = typed_shuffle(c.chem, c.gap, node_classes(c.names),

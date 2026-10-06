@@ -174,3 +174,9 @@ none passes: STOP; no sub-gate relay is used for any primary analysis;
 Task B replication is deferred and the Task B report documents the full
 attempt table instead. Catch-brain pass rates across all attempts (relay
 A + B) will be reported as a finding on teacher-building variance.
+
+Clarification (2026-10-06, logged during rung 14, before its result):
+seed 13 @ 6,000 PASSED the catch gate (>=90%) but the combined relay
+failed the relay gate (held 40% < 50%). Both stage gates were always
+required to use a relay; a rung failing EITHER gate counts as a failed
+attempt. Ladder unchanged: rungs 14 and 15 @ 10,000 remain the last two.

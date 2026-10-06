@@ -97,5 +97,26 @@ def loadF():
     _load(jobs, "F")
 
 
+def loadG():
+    """Task G seed extension (pre-registered): +2 seeds per shuffled
+    graph, same relay as the graph's original run. Tier 4 (behind F)."""
+    jobs = []
+    for g in range(60):                       # relay-A graphs (batch 2)
+        for t in (1, 2):
+            cfg = dict(type="distill_bc", kind=f"shuffle{g}", tseed=t,
+                       tier=4, cost=2, **STD)
+            h = jid(cfg)
+            cfg["id"] = f"b4{h[:4]}G_{cfg['kind']}_s{t}_{h[4:12]}"
+            jobs.append(cfg)
+    for g in range(200, 230):                 # relay-B graphs (Task B)
+        for t in (1, 2):
+            cfg = dict(type="distill_bc", kind=f"shuffle{g}", tseed=t,
+                       relay_dir="relay_B", tier=4, cost=2, **STD)
+            h = jid(cfg)
+            cfg["id"] = f"b4{h[:4]}G_{cfg['kind']}_s{t}_{h[4:12]}"
+            jobs.append(cfg)
+    _load(jobs, "G")
+
+
 if __name__ == "__main__":
-    {"loadA": loadA, "loadB": loadB, "loadT": loadT, "loadF": loadF}[sys.argv[1]]()
+    {"loadA": loadA, "loadB": loadB, "loadT": loadT, "loadF": loadF, "loadG": loadG}[sys.argv[1]]()

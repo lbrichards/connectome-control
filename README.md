@@ -156,3 +156,11 @@ neighbours in each model's own graph) there too? Comparison metric:
 rank-biserial separation of ablation effects, 1-hop-from-input nodes vs
 the rest, worms vs shuffles. Exploratory (labelled as such; no
 pre-registered test — Task C is descriptive).
+
+#### Task B deviation log (2026-10-06, before any Task B results)
+Relay B's catch brain at the pre-registered seed 11 (2,500 steps, the
+relay-A budget) FAILED the >=90% catch gate (44%). Per the gate's purpose,
+the teacher is retried: catch seed 11 at 6,000 steps, then seeds 12, 13 if
+needed; first to pass the unchanged gate is used. Swing brain (seed 10,
+100% reach) is kept. The pre-registered student analyses are unchanged;
+the realized catch seed/budget will be reported in the Task B report.

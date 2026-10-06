@@ -200,3 +200,51 @@ PRIMARY (pre-registered): held-rate, one-sided Mann-Whitney
 (rwSF < rwXF). SECONDARY: kick-AUC and noise-AUC (one-sided, Holm over
 2). Exploratory: both arms vs the Task A rw10 level (nearest whole-graph
 dose).
+
+## PRE-REGISTRATION: Task G — graph properties that predict performance
+## (correlational; committed 2026-10-06 BEFORE adding seeds or computing
+## any property value)
+
+Data: the 90 shuffled graphs (60 relay-A/batch-2, 30 relay-B/Task-B), the
+32 Task-A partially rewired graphs, and the worm. Two additional training
+seeds (tseed 1, 2) per shuffled graph, same protocol and same relay as
+each graph's original run (180 jobs, tier 4, behind Task F). Per-graph
+outcome: mean held-rate across its 3 seeds; kick/noise AUC secondaries.
+
+Fixed property list (computed on each graph; "union graph" = binarized
+chem + chem^T + gap, diagonal zeroed; "directed graph" = binarized chem):
+1. Reciprocity: fraction of directed chem edges whose reverse edge exists
+   (overall, and restricted to neuron->neuron edges).
+2. Directed 3-node motifs on chem: feedforward-loop count and 3-cycle
+   (feedback) count.
+3. 2-cycles and 3-cycles (chem) with all nodes within 2 directed hops
+   downstream of the 22 input neurons.
+4. Mean directed shortest-path length (chem, unweighted) from input
+   neurons to effector nodes (muscles + lowercase nodes), averaged over
+   reachable pairs; unreachable pairs reported as a count, not imputed.
+5. Number of nodes reachable within 2 directed hops of the inputs.
+6. Largest strongly connected component size (chem).
+7. Spectral radius of the count-weighted adjacency (chem + gap).
+8. Mean clustering coefficient of the union graph.
+9. Modularity: networkx louvain_communities (union graph, weight=None,
+   seed=0), modularity of the returned partition.
+10. Rich-club coefficient of the union graph at k* = 77 (the minimum
+    union-graph degree among the worm's command hubs AVAL/AVAR/AVBL/
+    AVBR), unnormalized (stated as such; no null-model normalization).
+
+PRIMARY (pre-registered): Spearman correlation of each property with
+per-graph mean held across the 90 shuffled graphs; Holm over the 10
+properties (reciprocity-overall is THE registered variant of #1; the
+neuron->neuron variant and motif #2's two counts are registered
+separately: the 10 tests are reciprocity-overall, FFL, 3-cycle,
+near-input cycles (2cyc+3cyc within 2 hops, summed), input->effector
+path length, 2-hop reach, LSCC size, spectral radius, clustering,
+modularity, rich-club@77 -- enumerated: 11; the FIRST TEN as listed here
+are the Holm family, rich-club@77 included, near-input cycles counted
+once).
+Out-of-sample: ridge regression (alpha chosen by LOO-CV on relay-A
+graphs only, standardized properties) trained on the 60 relay-A graphs,
+predicting the 30 relay-B graphs; report Spearman(predicted, observed).
+Placement: predict the worm and the Task-A rewired graphs from the same
+model; report predicted-vs-observed and whether prediction declines with
+realized f. Anything further is exploratory and labelled.

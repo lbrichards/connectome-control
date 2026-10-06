@@ -82,12 +82,13 @@ def main():
          f"{np.percentile(X,25)*100:.0f}-{np.percentile(X,75)*100:.0f})",
          f"- one-sided Mann-Whitney (rwS < rwX): U={U:.0f}, "
          f"**p = {p:.3f}**, rank-biserial r = {rb:+.2f}",
-         "- Verdict: NULL. Rewiring the input pathway hurts no more than "
-         "rewiring the same number of edges elsewhere. The Task-C "
-         "hypothesis (inference-time ablation importance of input-"
-         "adjacent neurons) does NOT transfer to training-time wiring "
-         "preciousness: training re-routes around a rewired input "
-         "pathway.", ""]
+         "- Verdict: no location effect detectable at f ~= 0.033, where "
+         "neither condition differs significantly from the intact worm; "
+         "the test had LOW POWER for a location effect at this dose. "
+         "The Task-C hypothesis is not supported at this budget, but a "
+         "full-dose location test (all 316 input-pathway edges) is "
+         "required before concluding the input wiring is not special.",
+         ""]
 
     # secondary AUC
     L.append("## Pre-registered secondary (kick/noise AUC, one-sided, "

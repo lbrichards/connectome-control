@@ -383,6 +383,57 @@ def partial_rewire(chem, gap, is_neuron, target_f, seed, verbose=False,
     return out_chem, out_gap, f
 
 
+def full_input_rewire(chem, gap, is_neuron, input_idx, seed):
+    """Remove EVERY original input-pathway edge (the 316 chem out-edges of
+    input_idx) by typed degree-preserving swaps. Within-pool swaps plateau
+    (~70% removable), so surviving pool originals are then swapped against
+    random same-class partners; each such swap can remove one non-pool
+    original as collateral. Gap untouched. Returns
+    (chem2, gap2, pool_removed, total_removed)."""
+    rng = np.random.default_rng(seed)
+    in_set = set(map(int, input_idx))
+    ii, jj = np.nonzero(chem)
+    cls = (is_neuron[jj].astype(int) * 2 + is_neuron[ii].astype(int))
+    orig = set(zip(ii.tolist(), jj.tolist()))
+    pool_orig = set((i, j) for i, j in orig if j in in_set)
+
+    out_chem = np.zeros_like(chem)
+    for cl in np.unique(cls):
+        sel = cls == cl
+        E = [[int(i), int(j), float(chem[i, j])]
+             for i, j in zip(ii[sel], jj[sel])]
+        existing = set((e[0], e[1]) for e in E)
+        p_orig = set(x for x in existing if x in pool_orig)
+        if p_orig:
+            n = len(E)
+            idx_of = {(e[0], e[1]): k for k, e in enumerate(E)}
+            for _ in range(400 * n):
+                surv = [x for x in existing if x in pool_orig]
+                if not surv:
+                    break
+                ia, ja = surv[rng.integers(0, len(surv))]
+                a = idx_of[(ia, ja)]
+                b = int(rng.integers(0, n))
+                if a == b:
+                    continue
+                ib, jb = E[b][0], E[b][1]
+                if ia == ib or ja == jb or ia == jb or ib == ja:
+                    continue
+                if (ia, jb) in existing or (ib, ja) in existing:
+                    continue
+                del idx_of[(ia, ja)]; del idx_of[(ib, jb)]
+                existing.discard((ia, ja)); existing.discard((ib, jb))
+                E[a][1], E[b][1] = jb, ja
+                existing.add((ia, jb)); existing.add((ib, ja))
+                idx_of[(ia, jb)] = a; idx_of[(ib, ja)] = b
+        for i, j, w in E:
+            out_chem[i, j] = w
+    new = set((int(a), int(b)) for a, b in zip(*np.nonzero(out_chem)))
+    pool_removed = len(pool_orig - new)
+    total_removed = len(orig - new)
+    return out_chem, gap.copy(), pool_removed, total_removed
+
+
 # ------------------------------------------------------- graph arms by name
 
 def build_graph(kind: str):
@@ -391,6 +442,22 @@ def build_graph(kind: str):
     c = load()
     if kind == "worm":
         return c.chem, c.gap, c.sensory, c.n
+    if kind.startswith("rwSF") or kind.startswith("rwXF"):
+        # FULL-dose location test (pre-registered): rwSF<g> removes every
+        # original input-pathway edge (316/316) with measured non-pool
+        # collateral; rwXF<g> removes a per-graph MATCHED total count of
+        # original edges entirely outside the pool.
+        g = int(kind[4:].lstrip("g"))
+        if kind[2] == "S":
+            ch, gp, pr, tr = full_input_rewire(
+                c.chem, c.gap, node_classes(c.names), c.sensory, seed=g)
+            return ch, gp, c.sensory, c.n
+        _, _, _, K = full_input_rewire(
+            c.chem, c.gap, node_classes(c.names), c.sensory, seed=g)
+        ch, gp, _ = partial_rewire(c.chem, c.gap, node_classes(c.names),
+                                   0.0, seed=g, restrict="not_input_out",
+                                   input_idx=c.sensory, target_edges=K)
+        return ch, gp, c.sensory, c.n
     if kind.startswith("rwS") or kind.startswith("rwX"):
         # targeted rewiring, matched budget K=200 edges (pre-registered;
         # within-pool swap recreation caps removals at ~220 of the 316

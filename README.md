@@ -180,3 +180,23 @@ seed 13 @ 6,000 PASSED the catch gate (>=90%) but the combined relay
 failed the relay gate (held 40% < 50%). Both stage gates were always
 required to use a relay; a rung failing EITHER gate counts as a failed
 attempt. Ladder unchanged: rungs 14 and 15 @ 10,000 remain the last two.
+
+### Task A extension 2 — FULL input-pathway rewiring (pre-registered
+### 2026-10-06, committed before any results; motivated by the low-power
+### caveat on the K=200 targeted test)
+
+rwSF<g>: every original input-pathway edge removed (316/316, verified per
+seed) via typed degree-preserving swaps; within-pool swaps plateau, so
+surviving pool originals are swapped against random same-class partners,
+each such swap removing one non-pool original as measured COLLATERAL
+(268-296 across seeds 0-11; totals 584-612 edges, realized f ~0.10 —
+comparable to Task A's rw10 level). rwXF<g>: a per-graph MATCHED total of
+original edges removed entirely OUTSIDE the pool (realized within ~3% of
+the rwSF total; pool untouched). Gap junctions untouched in both. 12
+graphs (seeds 0-11) x 2 training seeds (0,1) = 24 runs per arm, 48 jobs,
+batch-2 relay/dataset/budget, queued at tier 3 behind Task B.
+
+PRIMARY (pre-registered): held-rate, one-sided Mann-Whitney
+(rwSF < rwXF). SECONDARY: kick-AUC and noise-AUC (one-sided, Holm over
+2). Exploratory: both arms vs the Task A rw10 level (nearest whole-graph
+dose).

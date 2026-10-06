@@ -83,5 +83,19 @@ def loadT():
     _load(jobs, "T")
 
 
+def loadF():
+    """Full input-pathway rewiring (pre-registered ext. 2): tier 3."""
+    jobs = []
+    for v in ("SF", "XF"):
+        for g in range(12):
+            for t in (0, 1):
+                cfg = dict(type="distill_bc", kind=f"rw{v}g{g}", tseed=t,
+                           tier=3, cost=2, **STD)
+                h = jid(cfg)
+                cfg["id"] = f"b4{h[:4]}F_{cfg['kind']}_s{t}_{h[4:12]}"
+                jobs.append(cfg)
+    _load(jobs, "F")
+
+
 if __name__ == "__main__":
-    {"loadA": loadA, "loadB": loadB, "loadT": loadT}[sys.argv[1]]()
+    {"loadA": loadA, "loadB": loadB, "loadT": loadT, "loadF": loadF}[sys.argv[1]]()

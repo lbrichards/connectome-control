@@ -78,9 +78,10 @@ def main():
             U, p, rb, v = per_stratum(x, y, alternative)
             rows.append(
                 f"- relay {st}: worm median {np.median(x)*100:.0f}"
-                f"{'%' if metric=='held' else ''} vs dense "
-                f"{np.median(y)*100:.0f}{'%' if metric=='held' else ''} "
-                f"(AUC x100 for robustness); MW p={p:.3f}, r={rb:+.2f}")
+                f"{'%' if metric=='held' else ' (AUC x100)'} vs dense "
+                f"{np.median(y)*100:.0f}"
+                f"{'%' if metric=='held' else ''}; "
+                f"MW p={p:.3f}, r={rb:+.2f}")
             if st == "A":
                 rbs, vs = [rb], [v]
             else:

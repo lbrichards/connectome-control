@@ -253,3 +253,24 @@ realized f. Anything further is exploratory and labelled.
 Rule (same as the worm's, since 2026-10-06): the BEST demo-grade seed of the 20, labelled 'best of 20 seeds'. Tab blurb: "A conventional dense network with the same number of connections (about 6,000)." Research context: no established worm/dense-78 difference across two teachers (pooled).
 
 Current selection: **v4 dense-78, seed 2, best of 20 seeds (91% held, 3.0s to catch, 90% conversion) — criteria: ttc<=5s & quiet>=80% & convC>=50%**
+
+## PRE-REGISTRATION: worm vs dense-78 definitive sample (committed
+## 2026-10-06 ~21:00, BEFORE any of these runs exist)
+
+Design (fixed in advance): bring every cell to 40 training seeds —
+relay A: +20 worm (tseeds 20-39), +20 dense-78 (tseeds 20-39);
+relay B: +20 worm (tseeds 20-39), +30 dense-78 (tseeds 10-39).
+90 new jobs, identical protocol/budget/relays as the original cells;
+robustness suite (run_robust, seed 777) on every new model. Queued at
+tier 5, strictly behind Task G and its robustness fill; no code changes
+and no deploys required.
+
+PRE-REGISTERED ANALYSIS (run ONCE, only when all 160 runs and their
+robustness results are present; the script refuses otherwise):
+- Primary: worm vs dense-78 held-rate, TWO-SIDED, stratified by relay
+  (van Elteren, weights 1/(N_s+1), tie-corrected); report pooled and
+  per-relay rank-biserial effects and Cochran's Q heterogeneity.
+- Secondary: kick-AUC and noise-AUC, same stratified test, Holm over 2.
+
+STOPPING RULE: this is the FINAL sample for the worm-vs-dense-78
+question. No further seeds will be added regardless of the result.

@@ -164,3 +164,13 @@ the teacher is retried: catch seed 11 at 6,000 steps, then seeds 12, 13 if
 needed; first to pass the unchanged gate is used. Swing brain (seed 10,
 100% reach) is kept. The pre-registered student analyses are unchanged;
 the realized catch seed/budget will be reported in the Task B report.
+
+#### Relay B stopping rule (2026-10-06, logged while seed-13 attempt was
+#### already training, before its result was known)
+Ladder: catch seed 13 @ 6,000 steps; then seeds 14 and 15 @ 10,000. Max 3
+more attempts after seeds 11/12 @ 6,000 (84% best so far) and the original
+seed 11 @ 2,500. The >=90% gate is UNCHANGED. First pass -> use it. If
+none passes: STOP; no sub-gate relay is used for any primary analysis;
+Task B replication is deferred and the Task B report documents the full
+attempt table instead. Catch-brain pass rates across all attempts (relay
+A + B) will be reported as a finding on teacher-building variance.

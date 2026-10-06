@@ -122,3 +122,37 @@ vs shuffle (one-sided MW, Holm across the 2); worm vs dense-78 held-rate
 (batch 2) for every endpoint. Replication criterion, stated in advance:
 the worm-vs-shuffle held-rate direction reproduces with one-sided
 p < 0.05.
+
+### Task A extension — targeted rewiring (pre-registered 2026-10-06,
+### committed before any results; Task C ablation interim was already
+### seen and is the HYPOTHESIS SOURCE, stated for transparency)
+
+Question: is the worm advantage concentrated in the input-adjacent wiring?
+Measured design constraints, stated in advance: the 22 injected amphid
+sensory neurons have 316 chemical out-edges (5.2% of all 6,026 edges), so
+the requested "10% of edges" cannot be confined to that set; and within-
+pool swap recreation caps removals at ~220 of the 316. Matched budget used
+instead: K = 200 original edges removed in BOTH variants (= 63% of the
+input wiring, 3.3% of all edges). rwS<g>: typed degree-preserving swaps
+confined to sensory out-edges. rwX<g>: swaps confined to all OTHER
+chemical edges (realized counts land at 200-213; the spared variant's
+slight excess is conservative against the hypothesis). Gap junctions
+untouched in both. 8 graphs (seeds 0-7) x 2 training seeds (0,1) = 16
+runs per variant, 32 jobs, batch-2 relay/dataset/budget, queued at tier 2
+behind Task B.
+
+PRIMARY (pre-registered): held-rate rwS vs rwX, one-sided Mann-Whitney
+(rwS < rwX; direction from the Task C interim finding that ablation
+importance concentrates on input-adjacent neurons). SECONDARY: two-sided
+comparison of each variant against the Task-A rw10 level (nearest
+whole-graph budget); kick/noise AUC rwS vs rwX (one-sided, Holm over 2).
+
+### Task C extension — positional control (shuffle ablations)
+
+Same single-neuron ablation suite on 10 batch-2 shuffle models (the 5
+best and 5 median by held-rate). Question: does ablation importance
+concentrate on the input neurons' DIRECT chemical targets (1-hop
+neighbours in each model's own graph) there too? Comparison metric:
+rank-biserial separation of ablation effects, 1-hop-from-input nodes vs
+the rest, worms vs shuffles. Exploratory (labelled as such; no
+pre-registered test — Task C is descriptive).

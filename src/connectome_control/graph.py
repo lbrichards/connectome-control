@@ -279,24 +279,42 @@ def verify(chem, gap, chem2, gap2, is_neuron):
 
 # ===== partial typed rewiring (Task A) =====
 
-def partial_rewire(chem, gap, is_neuron, target_f, seed, verbose=False):
+def partial_rewire(chem, gap, is_neuron, target_f, seed, verbose=False,
+                   restrict=None, input_idx=None, target_edges=None):
     """Rewire a FRACTION of worm edges by the same typed, degree-preserving
     double-edge swaps as typed_shuffle, stopping once the realized fraction
     of ORIGINAL edges no longer present reaches target_f. Swap attempts are
     spread round-robin across classes in small increments (2% of class size)
     so the stop is precise; swaps may re-create destroyed originals, so f is
     always measured against the original edge sets, never counted.
-    Returns (chem2, gap2, realized_f). Deterministic in (target_f, seed)."""
+    Returns (chem2, gap2, realized_f). Deterministic in (target_f, seed).
+
+    restrict (targeted-rewiring extension): 'input_out' confines swaps to
+    chemical edges whose PRESYNAPTIC node is in input_idx (the injected
+    sensory set); 'not_input_out' confines swaps to all other chemical
+    edges. Gap junctions are untouched under either restriction so the two
+    variants differ only in WHICH chem edges move. target_edges, if given,
+    stops at an absolute count of original edges removed instead of a
+    fraction (both measured against the full original edge set)."""
     rng = np.random.default_rng(seed)
     n = len(is_neuron)
+    in_set = set(map(int, input_idx)) if input_idx is not None else set()
 
     ii, jj = np.nonzero(chem)
     cls = (is_neuron[jj].astype(int) * 2 + is_neuron[ii].astype(int))
-    chem_classes = []
+    chem_classes, frozen_chem = [], []
     for cl in np.unique(cls):
         sel = cls == cl
-        chem_classes.append([[int(i), int(j), float(chem[i, j])]
-                             for i, j in zip(ii[sel], jj[sel])])
+        E = [[int(i), int(j), float(chem[i, j])]
+             for i, j in zip(ii[sel], jj[sel])]
+        if restrict == "input_out":
+            chem_classes.append([e for e in E if e[1] in in_set])
+            frozen_chem.append([e for e in E if e[1] not in in_set])
+        elif restrict == "not_input_out":
+            chem_classes.append([e for e in E if e[1] not in in_set])
+            frozen_chem.append([e for e in E if e[1] in in_set])
+        else:
+            chem_classes.append(E)
     iu = np.triu_indices(n, k=1)
     mask = gap[iu] > 0
     pi, pj = iu[0][mask], iu[1][mask]
@@ -307,35 +325,54 @@ def partial_rewire(chem, gap, is_neuron, target_f, seed, verbose=False):
         gap_classes.append([[int(a), int(b), float(gap[a, b])]
                             for a, b in zip(pi[sel], pj[sel])])
 
-    orig_c = set((i, j) for E in chem_classes for i, j, _ in E)
+    if restrict is not None:
+        gap_frozen = True
+        orig_c = set((i, j) for E in chem_classes + frozen_chem
+                     for i, j, _ in E)
+    else:
+        gap_frozen = False
+        orig_c = set((i, j) for E in chem_classes for i, j, _ in E)
     orig_g = set((min(a, b), max(a, b))
                  for E in gap_classes for a, b, _ in E)
     total = len(orig_c) + len(orig_g)
 
-    def realized():
+    def removed():
         kept = sum((i, j) in orig_c for E in chem_classes for i, j, _ in E)
+        kept += sum(len(E) for E in frozen_chem) if restrict else 0
         kept += sum((min(a, b), max(a, b)) in orig_g
                     for E in gap_classes for a, b, _ in E)
-        return 1 - kept / total
+        return total - kept
 
-    f = 0.0
-    for _ in range(600):
-        if f >= target_f:
+    goal = target_edges if target_edges is not None \
+        else int(round(target_f * total))
+    rm = 0
+    step = 0.005 if restrict else 0.02      # finer steps near a tight goal
+    for _ in range(2000 if restrict else 600):
+        if rm >= goal:
             break
         for k, E in enumerate(chem_classes):
+            if not E:
+                continue
             E2, _ = _swap_rewire_directed(
-                E, rng, attempts=max(1, int(0.02 * len(E))))
+                E, rng, attempts=max(1, int(step * len(E))))
             chem_classes[k] = E2
-        for k, E in enumerate(gap_classes):
-            E2, _ = _swap_rewire_symmetric(
-                E, rng, attempts=max(1, int(0.02 * len(E))))
-            gap_classes[k] = E2
-        f = realized()
+            if restrict:
+                rm = removed()
+                if rm >= goal:
+                    break
+        if not gap_frozen:
+            for k, E in enumerate(gap_classes):
+                E2, _ = _swap_rewire_symmetric(
+                    E, rng, attempts=max(1, int(step * len(E))))
+                gap_classes[k] = E2
+        rm = removed()
+    f = rm / total
     if verbose:
-        print(f"  partial_rewire target {target_f:.2f} -> realized {f:.3f}")
+        print(f"  partial_rewire goal {goal} edges -> removed {rm} "
+              f"(f={f:.3f})")
 
     out_chem = np.zeros_like(chem)
-    for E in chem_classes:
+    for E in chem_classes + (frozen_chem if restrict else []):
         for i, j, w in E:
             out_chem[i, j] = w
     out_gap = np.zeros_like(gap)
@@ -354,6 +391,18 @@ def build_graph(kind: str):
     c = load()
     if kind == "worm":
         return c.chem, c.gap, c.sensory, c.n
+    if kind.startswith("rwS") or kind.startswith("rwX"):
+        # targeted rewiring, matched budget K=200 edges (pre-registered;
+        # within-pool swap recreation caps removals at ~220 of the 316
+        # input-out edges, so 200 is the largest budget both variants
+        # reach): rwS<g> = swaps confined to input-sensory out-edges;
+        # rwX<g> = swaps confined to all other chem edges; gap untouched.
+        g = int(kind[3:].lstrip("g"))
+        mode = "input_out" if kind[2] == "S" else "not_input_out"
+        ch, gp, _ = partial_rewire(c.chem, c.gap, node_classes(c.names),
+                                   0.0, seed=g, restrict=mode,
+                                   input_idx=c.sensory, target_edges=200)
+        return ch, gp, c.sensory, c.n
     if kind.startswith("rw"):
         pct, g = kind[2:].split("g")
         ch, gp, _ = partial_rewire(c.chem, c.gap, node_classes(c.names),

@@ -11,7 +11,7 @@ demo-grade passers, for EVERY arm, labelled "best of 20 seeds" — a
 showcase-vs-showcase comparison across tabs.
 Writes web/demo_selection.json consumed by the exporter.
 """
-import glob, json, sys
+import glob, json, os, sys
 import numpy as np, torch
 sys.path.insert(0, __file__.rsplit("/", 2)[0] + "/src")
 from connectome_control.protocol import rollout, hang_starts, metrics
@@ -19,7 +19,7 @@ from connectome_control.jobs import _build_net
 
 ARM = sys.argv[1] if len(sys.argv) > 1 else "worm"
 rows = []
-for f in sorted(glob.glob(f"/Users/macmini/cc-queue/results/b2t1_{ARM}_*.json")):
+for f in sorted(glob.glob(os.path.expanduser(f"~/cc-queue/results/b2t1_{ARM}_*.json"))):
     r = json.load(open(f)); seed = r["job"]["tseed"]
     ck = torch.load(f.replace(".json", ".pt"), weights_only=False)
     net = _build_net(ARM, seed); net.load_state_dict(ck["state"])

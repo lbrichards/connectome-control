@@ -71,7 +71,7 @@ def pick_batch2_worm():
 
 def export_model(pt_path, held, tseed, label, kind="worm",
                  out_name="worm_v4.json"):
-    ck = torch.load(pt_path, weights_only=False)
+    ck = torch.load(os.path.expanduser(pt_path), weights_only=False)
     chem, gap, in_idx, n = build_graph(kind)
     net = ConnectomeRNN(chem, gap, np.asarray(in_idx, np.int64),
                         np.arange(n, dtype=np.int64), n_in=3, n_out=1,

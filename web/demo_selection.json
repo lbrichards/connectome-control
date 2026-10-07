@@ -1,5 +1,5 @@
 {
- "pt": "/Users/macmini/cc-queue/results/b2t1_worm_s16_3458dc45f950a149.pt",
+ "pt": "~/cc-queue/results/b2t1_worm_s16_3458dc45f950a149.pt",
  "seed": 16,
  "label": "v4 C. elegans, seed 16, best of 20 seeds (94% held, 4.3s to catch, 93% conversion)",
  "criteria": "ttc<=5s & quiet>=80% & convC>=50%",

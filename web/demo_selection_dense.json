@@ -1,5 +1,5 @@
 {
- "pt": "/Users/macmini/cc-queue/results/b2t1_dense78_s2_2a2044430dd889a9.pt",
+ "pt": "~/cc-queue/results/b2t1_dense78_s2_2a2044430dd889a9.pt",
  "seed": 2,
  "label": "v4 dense-78, seed 2, best of 20 seeds (91% held, 3.0s to catch, 90% conversion)",
  "criteria": "ttc<=5s & quiet>=80% & convC>=50%",

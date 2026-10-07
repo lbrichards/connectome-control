@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "connectome-control: the C. elegans connectome as a trainable
+  cart-pole controller"
+type: software
+authors:
+  - family-names: Richards
+    given-names: Larry
+    affiliation: Independent Researcher
+    orcid: "https://orcid.org/0000-0000-0000-0000"  # TODO: real ORCID
+license: MIT
+repository-code: "https://github.com/lbrichards/connectome-control"
+keywords:
+  - C. elegans
+  - connectome
+  - recurrent neural network
+  - cart-pole
+  - behavioral cloning
+  - network topology
+# doi: 10.5281/zenodo.XXXXXXX   # TODO: filled after Zenodo mint

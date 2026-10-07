@@ -274,3 +274,23 @@ robustness results are present; the script refuses otherwise):
 
 STOPPING RULE: this is the FINAL sample for the worm-vs-dense-78
 question. No further seeds will be added regardless of the result.
+
+## Reproduction (one command per result)
+
+All runs are CPU-only, single-threaded per job, bitwise-deterministic on
+arm64 (seeds in each job config; weights sha256 in each manifest).
+`uv venv && uv pip sync requirements.lock` prepares the environment.
+Data DOI: 10.5281/zenodo.XXXXXXX (placeholder until minted).
+
+| result | command | runtime (one M-class core) |
+|---|---|---|
+| relay-A teacher + distillation dataset | `python -m connectome_control.relay` | ~1 h |
+| relay-B teacher (Task B) | `python -m connectome_control.relay relayB` | ~2-4 h (seed ladder) |
+| one Tier-1 student (any arm) | `python -m connectome_control.jobs <job.json>` (configs emitted by `queue/batch2.py load` / `queue/batch4.py loadA..H`) | ~30 min |
+| full batch-2 replication (260 jobs) | `queue/batch2.py pilot && queue/batch2.py load <target>` + workers (`bin/worker2.sh`) | ~1 night on 17 workers |
+| Tasks A/T/B/F/G/H (466 jobs) | `queue/batch4.py loadA|loadT|loadB|loadF|loadG|loadH` | ~1 day on 17 workers |
+| robustness suite for a model | `connectome_control.jobs.run_robust({'ref': <id>})` | ~2.5 min |
+| pre-registered analyses + reports | `python analysis/taska_report.py` (likewise taskb/taskf/taskg/taskh, stratified_relays, taskt) | minutes |
+| interpretability (Task C) | `python analysis/interp_worms.py all && python analysis/taskc_report.py` | ~2 h |
+| paper figures (full-sample) | `python analysis/paper_refresh.py` | ~5 min |
+| web demo models + parity | `python tools/select_demo_model.py [worm|dense78] && python tools/export_web_model.py && cd web && npx vitest run` | ~10 min |

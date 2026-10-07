@@ -1,0 +1,22 @@
+{
+  "title": "connectome-control: the C. elegans connectome as a trainable cart-pole controller",
+  "description": "Code and data for a pre-registered study training leaky-integrator recurrent networks masked by the C. elegans connectome (OpenWorm c302 herm_full_edgelist) to swing up and balance a cart-pole from positions-only observations under a 20 ms action delay. Includes the protocol-v4 training/evaluation pipeline, typed degree-preserving graph controls (full and partial rewiring), relay-distillation teachers, multi-machine deterministic job queue, all per-run results and manifests, pre-registered analyses, and the interactive web demo.",
+  "creators": [
+    {
+      "name": "Richards, Larry",
+      "affiliation": "Independent Researcher",
+      "orcid": "0000-0000-0000-0000"
+    }
+  ],
+  "license": "MIT",
+  "upload_type": "software",
+  "keywords": [
+    "C. elegans",
+    "connectome",
+    "recurrent neural network",
+    "cart-pole",
+    "behavioral cloning",
+    "network topology",
+    "pre-registration"
+  ]
+}
